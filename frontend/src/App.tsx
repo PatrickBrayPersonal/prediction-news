@@ -16,16 +16,16 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#0f1117] text-slate-100">
       {/* Header */}
-      <header className="border-b border-[#2a2d3a] px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-baseline gap-3">
+      <header className="border-b border-[#2a2d3a]">
+        <div className="max-w-2xl mx-auto px-6 py-4 flex items-baseline gap-3">
           <h1 className="text-white font-bold text-xl tracking-tight">PredictionNews</h1>
           <span className="text-slate-600 text-xs">news that moved the market</span>
         </div>
       </header>
 
       {/* Tab nav */}
-      <nav className="border-b border-[#2a2d3a] px-6">
-        <div className="max-w-2xl mx-auto flex gap-1">
+      <nav className="border-b border-[#2a2d3a]">
+        <div className="max-w-2xl mx-auto px-6 flex gap-1">
           {DOMAINS.map((d) => (
             <button
               key={d.id}
