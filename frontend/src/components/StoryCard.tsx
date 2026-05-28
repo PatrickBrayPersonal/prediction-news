@@ -33,20 +33,18 @@ export function StoryCard({ card }: Props) {
         </span>
       </div>
 
-      {/* Market + sparkline row */}
-      <div className="flex items-center gap-4">
-        <Sparkline data={card.sparkline} width={120} height={36} />
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-baseline gap-2">
-            <span className="text-white font-mono text-lg font-semibold">
-              {formatProb(card.current_probability)}
-            </span>
-            <span className={`font-mono text-sm font-medium ${moveColor}`}>
-              {formatMove(card.probability_move)}
-            </span>
-          </div>
-          <span className="text-slate-500 text-xs">{formatVolume(card.volume_usd)} vol</span>
-        </div>
+      {/* Sparkline */}
+      <Sparkline data={card.sparkline} height={48} />
+
+      {/* Probability stats */}
+      <div className="flex items-baseline gap-2">
+        <span className="text-white font-mono text-lg font-semibold">
+          {formatProb(card.current_probability)}
+        </span>
+        <span className={`font-mono text-sm font-medium ${moveColor}`}>
+          {formatMove(card.probability_move)}
+        </span>
+        <span className="text-slate-500 text-xs ml-auto">{formatVolume(card.volume_usd)} vol</span>
       </div>
 
       {/* Market name */}

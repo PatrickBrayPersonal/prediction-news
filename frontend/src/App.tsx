@@ -19,7 +19,7 @@ export default function App() {
       <header className="border-b border-[#2a2d3a]">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-baseline gap-3">
           <h1 className="text-white font-bold text-xl tracking-tight">PredictionNews</h1>
-          <span className="text-slate-600 text-xs">news that moved the market</span>
+          <span className="text-slate-600 text-xs">News that moved the market</span>
         </div>
       </header>
 

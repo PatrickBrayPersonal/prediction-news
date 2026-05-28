@@ -2,11 +2,12 @@ import type { SparklinePoint } from '../types'
 
 interface Props {
   data: SparklinePoint[]
-  width?: number
   height?: number
 }
 
-export function Sparkline({ data, width = 120, height = 36 }: Props) {
+const VB_WIDTH = 200
+
+export function Sparkline({ data, height = 48 }: Props) {
   if (data.length < 2) return null
 
   const probs = data.map((d) => d.probability)
@@ -15,7 +16,7 @@ export function Sparkline({ data, width = 120, height = 36 }: Props) {
   const range = max - min || 0.01
 
   const pad = 2
-  const w = width - pad * 2
+  const w = VB_WIDTH - pad * 2
   const h = height - pad * 2
 
   const points = data.map((d, i) => {
@@ -28,7 +29,13 @@ export function Sparkline({ data, width = 120, height = 36 }: Props) {
   const color = isUp ? '#4ade80' : '#f87171'
 
   return (
-    <svg width={width} height={height} className="shrink-0">
+    <svg
+      width="80%"
+      height={height}
+      viewBox={`0 0 ${VB_WIDTH} ${height}`}
+      preserveAspectRatio="none"
+      className="block mx-auto"
+    >
       <polyline
         points={points.join(' ')}
         fill="none"
