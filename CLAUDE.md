@@ -9,7 +9,7 @@ A news site that ranks stories by their impact on prediction markets — filteri
 - Full vision and design spec in notes vault: `1 Me/PredictionNews/`
 
 ## Stack
-- **Backend**: Python 3.11, FastAPI, Poetry — `poetry run uvicorn main:app --reload --port 8000`
+- **Backend**: Python 3.11, FastAPI, Poetry — `poetry run uvicorn prediction_news.api:app --reload --port 8000`
 - **Frontend**: React, Vite, TypeScript, Tailwind CSS — `cd frontend && npm run dev` (runs on :5173, proxies /api to :8000)
 - **LLM**: Claude (Anthropic) for relevance scoring and summaries
 

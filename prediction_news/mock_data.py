@@ -1,4 +1,4 @@
-from models import StoryCard, SparklinePoint, Source
+from prediction_news.models import StoryCard, SparklinePoint, Source
 
 MOCK_CARDS: list[StoryCard] = [
     # ── POLITICS ─────────────────────────────────────────────────────────────

@@ -26,7 +26,7 @@ Stories are ranked by `|probability_move| × volume` — a proxy for "interestin
 # Backend (terminal 1)
 cd prediction-news
 poetry install
-poetry run uvicorn main:app --reload --port 8000
+poetry run uvicorn prediction_news.api:app --reload --port 8000
 
 # Frontend (terminal 2)
 cd prediction-news/frontend
@@ -42,9 +42,10 @@ The frontend proxies `/api` requests to the backend at `:8000`, so no CORS confi
 
 ```
 prediction-news/
-  main.py          # FastAPI app — GET /api/feeds/{domain}
-  models.py        # Pydantic schemas (StoryCard, SparklinePoint, Source)
-  mock_data.py     # Fixture data for prototype (9 cards across 3 domains)
+  prediction_news/
+    api.py         # FastAPI app — GET /api/feeds/{domain}
+    models.py      # Pydantic schemas (StoryCard, SparklinePoint, Source)
+    mock_data.py   # Fixture data for prototype (9 cards across 3 domains)
   frontend/
     src/
       App.tsx                    # Root — tab nav + feed

@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from models import StoryCard
-from mock_data import MOCK_CARDS
+from prediction_news.models import StoryCard
+from prediction_news.mock_data import MOCK_CARDS
 
 load_dotenv()
 

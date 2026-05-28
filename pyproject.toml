@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Prediction market news aggregator"
 authors = ["Patrick Bray"]
 readme = "README.md"
+packages = [{include = "prediction_news"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
