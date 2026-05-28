@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "prediction-news"
+version = "0.1.0"
+description = "Prediction market news aggregator"
+authors = ["Patrick Bray"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.136.3"
+uvicorn = {extras = ["standard"], version = "^0.48.0"}
+anthropic = "^0.105.0"
+python-dotenv = "^1.2.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
