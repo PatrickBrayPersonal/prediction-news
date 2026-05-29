@@ -159,3 +159,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 kalshi_private.key
+
+# FRONTEND CODE
+frontend/node_modules
+frontend/src
