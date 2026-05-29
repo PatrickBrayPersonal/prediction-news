@@ -6,8 +6,6 @@ def mock_env(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     monkeypatch.setenv("KALSHI_API_KEY", "test-kalshi-key")
     monkeypatch.setenv("KALSHI_PRIVATE_KEY_PATH", "tests/fixtures/test.key")
-    monkeypatch.setenv("POLYMARKET_API_KEY", "test-polymarket-key")
-    monkeypatch.setenv("X_BEARER_TOKEN", "test-x-token")
     monkeypatch.setenv("CORS_ORIGINS", "http://localhost:5173")
 
 
