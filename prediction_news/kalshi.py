@@ -71,6 +71,8 @@ def get_candlesticks(ticker: str, days: int = 7) -> list[dict]:
             headers=_auth_headers("GET", market_path),
             params=params,
         )
+        if r.status_code == 404:
+            return []
         r.raise_for_status()
         return r.json().get("candlesticks", [])
 
@@ -125,7 +127,7 @@ def market_to_card_fields(market: dict, candles: list[dict]) -> dict:
         "id": market["ticker"].lower(),
         "platform": "Kalshi",
         "market_name": market.get("title", market["ticker"]),
-        "headline": market.get("yes_sub_title") or market.get("title", ""),
+        "headline": market.get("title", market["ticker"]),
         "current_probability": current_prob,
         "probability_move": probability_move,
         "volume_usd": volume,
