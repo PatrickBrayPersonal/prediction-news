@@ -1,5 +1,18 @@
 import pytest
 
+import prediction_news.kalshi as _kalshi_module
+
+
+@pytest.fixture(autouse=True)
+def clear_kalshi_caches():
+    _kalshi_module._MARKET_LIST_CACHE.clear()
+    _kalshi_module._CANDLESTICK_CACHE.clear()
+    _kalshi_module._CANDLESTICK_FAILURE_CACHE.clear()
+    yield
+    _kalshi_module._MARKET_LIST_CACHE.clear()
+    _kalshi_module._CANDLESTICK_CACHE.clear()
+    _kalshi_module._CANDLESTICK_FAILURE_CACHE.clear()
+
 
 @pytest.fixture(autouse=True)
 def mock_env(monkeypatch):
