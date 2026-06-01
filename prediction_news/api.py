@@ -1,4 +1,5 @@
 import logging
+import logging.config
 from enum import Enum
 
 from fastapi import FastAPI
@@ -7,6 +8,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from prediction_news.config import settings
 from prediction_news.feed import build_feed
 from prediction_news.models import StoryCard
+
+logging.config.dictConfig({
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(asctime)s %(levelname)-8s %(name)s  %(message)s",
+            "datefmt": "%H:%M:%S",
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        }
+    },
+    "loggers": {
+        "prediction_news": {"level": "INFO", "handlers": ["console"], "propagate": False},
+    },
+    "root": {"level": "WARNING", "handlers": ["console"]},
+})
 
 logger = logging.getLogger(__name__)
 
