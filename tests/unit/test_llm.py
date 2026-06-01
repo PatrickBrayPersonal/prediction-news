@@ -1,6 +1,5 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 
 from prediction_news.models import Source
 from prediction_news.services.llm import (
@@ -15,7 +14,9 @@ SAMPLE_SOURCES = [
 ]
 
 
-def _make_mock_client(response_text: str, input_tokens: int = 100, output_tokens: int = 50) -> MagicMock:
+def _make_mock_client(
+    response_text: str, input_tokens: int = 100, output_tokens: int = 50
+) -> MagicMock:
     mock_usage = MagicMock()
     mock_usage.input_tokens = input_tokens
     mock_usage.output_tokens = output_tokens

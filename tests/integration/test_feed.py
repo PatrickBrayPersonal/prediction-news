@@ -1,6 +1,5 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-import pytest
 
 from prediction_news.feed import build_feed
 from prediction_news.models import Source, StoryCard
@@ -22,19 +21,36 @@ SAMPLE_CANDLES = [
     {"end_period_ts": 1700172800, "yes_bid": 0.50, "yes_ask": 0.54, "volume": 90_000},
 ]
 
-SAMPLE_SOURCE = Source(title="Election article", url="https://reuters.com/1", type="rss")
+SAMPLE_SOURCE = Source(
+    title="Election article", url="https://reuters.com/1", type="rss"
+)
 SAMPLE_SUMMARY = "Democrats gained ground after a strong debate performance."
 SAMPLE_NOTE = "A 10pp move in a $5M market is highly significant."
 
 
 async def test_build_feed_returns_story_cards():
     with (
-        patch("prediction_news.feed.list_markets", new=AsyncMock(return_value=[SAMPLE_MARKET])),
-        patch("prediction_news.feed.get_candlesticks", new=AsyncMock(return_value=SAMPLE_CANDLES)),
+        patch(
+            "prediction_news.feed.list_markets",
+            new=AsyncMock(return_value=[SAMPLE_MARKET]),
+        ),
+        patch(
+            "prediction_news.feed.get_candlesticks",
+            new=AsyncMock(return_value=SAMPLE_CANDLES),
+        ),
         patch("prediction_news.feed.fetch_articles", return_value=[SAMPLE_SOURCE]),
-        patch("prediction_news.feed.prefilter_articles", new=AsyncMock(return_value=[SAMPLE_SOURCE])),
-        patch("prediction_news.feed.score_and_summarize", new=AsyncMock(return_value=(SAMPLE_SUMMARY, [SAMPLE_SOURCE]))),
-        patch("prediction_news.feed.generate_calibration_note", new=AsyncMock(return_value=SAMPLE_NOTE)),
+        patch(
+            "prediction_news.feed.prefilter_articles",
+            new=AsyncMock(return_value=[SAMPLE_SOURCE]),
+        ),
+        patch(
+            "prediction_news.feed.score_and_summarize",
+            new=AsyncMock(return_value=(SAMPLE_SUMMARY, [SAMPLE_SOURCE])),
+        ),
+        patch(
+            "prediction_news.feed.generate_calibration_note",
+            new=AsyncMock(return_value=SAMPLE_NOTE),
+        ),
     ):
         result = await build_feed("politics")
 
@@ -50,12 +66,32 @@ async def test_build_feed_returns_story_cards():
 
 async def test_build_feed_cards_are_ranked():
     high_candles = [
-        {"end_period_ts": 1700000000, "yes_bid": 0.10, "yes_ask": 0.12, "volume": 10_000},
-        {"end_period_ts": 1700172800, "yes_bid": 0.90, "yes_ask": 0.92, "volume": 50_000},
+        {
+            "end_period_ts": 1700000000,
+            "yes_bid": 0.10,
+            "yes_ask": 0.12,
+            "volume": 10_000,
+        },
+        {
+            "end_period_ts": 1700172800,
+            "yes_bid": 0.90,
+            "yes_ask": 0.92,
+            "volume": 50_000,
+        },
     ]
     low_candles = [
-        {"end_period_ts": 1700000000, "yes_bid": 0.48, "yes_ask": 0.50, "volume": 10_000},
-        {"end_period_ts": 1700172800, "yes_bid": 0.50, "yes_ask": 0.52, "volume": 10_000},
+        {
+            "end_period_ts": 1700000000,
+            "yes_bid": 0.48,
+            "yes_ask": 0.50,
+            "volume": 10_000,
+        },
+        {
+            "end_period_ts": 1700172800,
+            "yes_bid": 0.50,
+            "yes_ask": 0.52,
+            "volume": 10_000,
+        },
     ]
     market_high = {**SAMPLE_MARKET, "ticker": "KXELECTION-HIGH", "volume": 10_000_000}
     market_low = {**SAMPLE_MARKET, "ticker": "KXELECTION-LOW", "volume": 100_000}
@@ -66,12 +102,24 @@ async def test_build_feed_cards_are_ranked():
         return candles_by_ticker[ticker]
 
     with (
-        patch("prediction_news.feed.list_markets", new=AsyncMock(return_value=[market_high, market_low])),
+        patch(
+            "prediction_news.feed.list_markets",
+            new=AsyncMock(return_value=[market_high, market_low]),
+        ),
         patch("prediction_news.feed.get_candlesticks", side_effect=mock_candlesticks),
         patch("prediction_news.feed.fetch_articles", return_value=[SAMPLE_SOURCE]),
-        patch("prediction_news.feed.prefilter_articles", new=AsyncMock(return_value=[SAMPLE_SOURCE])),
-        patch("prediction_news.feed.score_and_summarize", new=AsyncMock(return_value=(SAMPLE_SUMMARY, [SAMPLE_SOURCE]))),
-        patch("prediction_news.feed.generate_calibration_note", new=AsyncMock(return_value=SAMPLE_NOTE)),
+        patch(
+            "prediction_news.feed.prefilter_articles",
+            new=AsyncMock(return_value=[SAMPLE_SOURCE]),
+        ),
+        patch(
+            "prediction_news.feed.score_and_summarize",
+            new=AsyncMock(return_value=(SAMPLE_SUMMARY, [SAMPLE_SOURCE])),
+        ),
+        patch(
+            "prediction_news.feed.generate_calibration_note",
+            new=AsyncMock(return_value=SAMPLE_NOTE),
+        ),
     ):
         result = await build_feed("politics")
 
@@ -81,13 +129,18 @@ async def test_build_feed_cards_are_ranked():
 
 
 async def test_build_feed_handles_kalshi_failure():
-    with patch("prediction_news.feed.list_markets", new=AsyncMock(side_effect=Exception("API down"))):
+    with patch(
+        "prediction_news.feed.list_markets",
+        new=AsyncMock(side_effect=Exception("API down")),
+    ):
         result = await build_feed("politics")
     assert result == []
 
 
 async def test_build_feed_unknown_domain_returns_empty():
-    with patch("prediction_news.feed.list_markets", new=AsyncMock(return_value=[])) as mock_list:
+    with patch(
+        "prediction_news.feed.list_markets", new=AsyncMock(return_value=[])
+    ) as mock_list:
         result = await build_feed("unknown_domain")
     mock_list.assert_not_called()
     assert result == []

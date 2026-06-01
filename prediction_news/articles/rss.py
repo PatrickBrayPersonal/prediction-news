@@ -36,7 +36,9 @@ def _matches_keywords(entry: dict, keywords: list[str]) -> bool:
     return any(kw.lower() in text for kw in keywords)
 
 
-def fetch_articles(keywords: list[str], domain: str, since_hours: int = 48) -> list[Source]:
+def fetch_articles(
+    keywords: list[str], domain: str, since_hours: int = 48
+) -> list[Source]:
     feed_urls = RSS_FEEDS.get(domain, [])
     seen_urls: set[str] = set()
     results: list[Source] = []

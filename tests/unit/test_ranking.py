@@ -2,7 +2,9 @@ from prediction_news.models import Source, SparklinePoint, StoryCard
 from prediction_news.ranking import rank_cards, score_card
 
 
-def _make_card(probability_move: float, volume_usd: float, card_id: str = "test") -> StoryCard:
+def _make_card(
+    probability_move: float, volume_usd: float, card_id: str = "test"
+) -> StoryCard:
     return StoryCard(
         id=card_id,
         domain="politics",

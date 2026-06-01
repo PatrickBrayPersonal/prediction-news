@@ -30,7 +30,9 @@ def _auth_headers(method: str, path: str) -> dict[str, str]:
     key = _load_private_key()
     signature = key.sign(
         message.encode("utf-8"),
-        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.DIGEST_LENGTH),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.DIGEST_LENGTH
+        ),
         hashes.SHA256(),
     )
     return {

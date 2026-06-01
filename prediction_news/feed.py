@@ -68,7 +68,12 @@ async def build_feed(domain: str) -> list[StoryCard]:
                     seen.add(ticker)
                     all_markets.append(m)
     except Exception as exc:
-        logger.error("Failed to fetch markets from Kalshi for domain=%s: %s", domain, exc, exc_info=True)
+        logger.error(
+            "Failed to fetch markets from Kalshi for domain=%s: %s",
+            domain,
+            exc,
+            exc_info=True,
+        )
         return []
 
     results = await asyncio.gather(

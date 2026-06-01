@@ -18,6 +18,7 @@ async def _check_config() -> None:
     if not settings.kalshi_api_key:
         logger.warning("KALSHI_API_KEY is not set — all Kalshi requests will 401")
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,

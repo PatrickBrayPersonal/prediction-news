@@ -78,9 +78,9 @@ async def score_and_summarize(
 
     for line in response.content[0].text.strip().split("\n"):
         if line.startswith("SUMMARY:"):
-            summary = line[len("SUMMARY:"):].strip()
+            summary = line[len("SUMMARY:") :].strip()
         elif line.startswith("SOURCES:"):
-            urls = [u.strip() for u in line[len("SOURCES:"):].split(",")]
+            urls = [u.strip() for u in line[len("SOURCES:") :].split(",")]
             ranked_sources = [url_to_source[u] for u in urls if u in url_to_source]
 
     return (summary, ranked_sources)

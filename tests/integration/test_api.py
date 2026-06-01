@@ -22,7 +22,9 @@ SAMPLE_CARD = StoryCard(
 
 
 def test_get_feed_returns_200_with_cards():
-    with patch("prediction_news.api.build_feed", new=AsyncMock(return_value=[SAMPLE_CARD])):
+    with patch(
+        "prediction_news.api.build_feed", new=AsyncMock(return_value=[SAMPLE_CARD])
+    ):
         client = TestClient(app)
         response = client.get("/api/feeds/politics")
     assert response.status_code == 200
