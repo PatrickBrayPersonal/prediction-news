@@ -1,13 +1,16 @@
+import json
 import logging
 import logging.config
 from enum import Enum
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from prediction_news.config import settings
-from prediction_news.feed import build_feed
 from prediction_news.models import StoryCard
+
+DATA_DIR = Path(__file__).parent.parent / "data" / "feeds"
 
 logging.config.dictConfig({
     "version": 1,
@@ -57,4 +60,16 @@ class Domain(str, Enum):
 
 @app.get("/api/feeds/{domain}", response_model=list[StoryCard])
 async def get_feed(domain: Domain) -> list[StoryCard]:
-    return await build_feed(domain.value)
+    path = DATA_DIR / f"{domain.value}.json"
+    if not path.exists():
+        return []
+    data = json.loads(path.read_text())
+    return [StoryCard.model_validate(card) for card in data]
+
+
+@app.get("/api/last_updated")
+async def get_last_updated() -> dict:
+    path = DATA_DIR / "last_updated.json"
+    if not path.exists():
+        return {"last_updated": None}
+    return json.loads(path.read_text())
