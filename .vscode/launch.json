@@ -11,6 +11,14 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "UPDATE FEED",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/update_feed.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
