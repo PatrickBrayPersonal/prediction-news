@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 import feedparser
 
+from prediction_news.config import settings
 from prediction_news.models import Source
 
 RSS_FEEDS: dict[str, list[str]] = {
@@ -37,8 +38,9 @@ def _matches_keywords(entry: dict, keywords: list[str]) -> bool:
 
 
 def fetch_articles(
-    keywords: list[str], domain: str, since_hours: int = 48
+    keywords: list[str], domain: str, since_hours: int | None = None
 ) -> list[Source]:
+    since_hours = since_hours if since_hours is not None else settings.rss_lookback_hours
     feed_urls = RSS_FEEDS.get(domain, [])
     seen_urls: set[str] = set()
     results: list[Source] = []

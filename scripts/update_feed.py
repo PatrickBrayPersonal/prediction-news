@@ -6,11 +6,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from prediction_news.config import settings
 from prediction_news.feed import build_feed
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "feeds"
-# DOMAINS = ["politics", "world", "sports"]
-DOMAINS = ["politics"]
+DOMAINS = settings.feed_domains_list
 
 
 async def main() -> None:

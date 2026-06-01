@@ -102,7 +102,7 @@ async def _fetch_events(category: str) -> list[dict]:
         async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
             response = await client.get(
                 "/events",
-                params={"status": "open", "category": category, "limit": "50"},
+                params={"status": "open", "category": category, "limit": str(settings.kalshi_events_limit)},
                 headers=_auth_headers("GET", path),
             )
             response.raise_for_status()
