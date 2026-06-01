@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 
 from fastapi import FastAPI
@@ -7,7 +8,15 @@ from prediction_news.config import settings
 from prediction_news.feed import build_feed
 from prediction_news.models import StoryCard
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="PredictionNews")
+
+
+@app.on_event("startup")
+async def _check_config() -> None:
+    if not settings.kalshi_api_key:
+        logger.warning("KALSHI_API_KEY is not set — all Kalshi requests will 401")
 
 app.add_middleware(
     CORSMiddleware,

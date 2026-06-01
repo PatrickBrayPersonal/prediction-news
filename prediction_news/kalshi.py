@@ -1,25 +1,30 @@
 import base64
-import os
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import httpx
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
+from prediction_news.config import settings
 from prediction_news.models import SparklinePoint
 
 KALSHI_BASE = "https://trading-api.kalshi.com/trade-api/v2"
 
+_REPO_ROOT = Path(__file__).parent.parent
+
 
 def _load_private_key(key_path: str | None = None):
-    path = key_path or os.getenv("KALSHI_PRIVATE_KEY_PATH", "kalshi_private.key")
+    path = Path(key_path or settings.kalshi_private_key_path)
+    if not path.is_absolute():
+        path = _REPO_ROOT / path
     with open(path, "rb") as f:
         return serialization.load_pem_private_key(f.read(), password=None)
 
 
 def _auth_headers(method: str, path: str) -> dict[str, str]:
-    api_key = os.getenv("KALSHI_API_KEY", "")
+    api_key = settings.kalshi_api_key
     timestamp_ms = str(int(time.time() * 1000))
     message = timestamp_ms + method.upper() + path
     key = _load_private_key()
