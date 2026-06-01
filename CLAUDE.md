@@ -63,13 +63,17 @@ DATABASE_URL=
 ```bash
 # Backend
 poetry install
-poetry run uvicorn prediction_news.main:app --reload
+poetry run uvicorn prediction_news.api:app --reload --port 8000
 
 # Frontend
 cd frontend
 npm install
-npm run dev
+npm run dev  # http://localhost:5173/
 ```
+
+Vite proxies `/api` → `http://localhost:8000` (configured in `vite.config.ts`).
+
+**Expected:** Feed shows "No stories found" when `KALSHI_API_KEY` is unset — the API returns `[]` gracefully, not a crash. Wire in real credentials to see live cards.
 
 ## Testing
 
