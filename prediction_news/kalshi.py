@@ -19,6 +19,7 @@ _REPO_ROOT = Path(__file__).parent.parent
 
 _SEMAPHORE = asyncio.Semaphore(3)
 _MARKET_LIST_CACHE: TTLCache = TTLCache(maxsize=64, ttl=300)
+_EVENTS_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
 _CANDLESTICK_CACHE: TTLCache = TTLCache(maxsize=512, ttl=600)
 _CANDLESTICK_FAILURE_CACHE: TTLCache = TTLCache(maxsize=512, ttl=120)
 
@@ -46,7 +47,7 @@ def _load_private_key(key_path: str | None = None):
 
 
 def _auth_headers(method: str, path: str) -> dict[str, str]:
-    api_key = settings.kalshi_api_key
+    api_key = settings.kalshi_key_id
     timestamp_ms = str(int(time.time() * 1000))
     message = timestamp_ms + method.upper() + path
     key = _load_private_key()
@@ -91,6 +92,61 @@ async def list_markets(series: str | None = None) -> list[dict]:
 
 
 @_KALSHI_RETRY
+async def _fetch_events(category: str) -> list[dict]:
+    path = "/trade-api/v2/events"
+    async with _SEMAPHORE:
+        async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
+            response = await client.get(
+                "/events",
+                params={"status": "open", "category": category, "limit": "50"},
+                headers=_auth_headers("GET", path),
+            )
+            response.raise_for_status()
+            return response.json().get("events", [])
+
+
+@_KALSHI_RETRY
+async def _fetch_markets_by_event(event_ticker: str) -> list[dict]:
+    path = "/trade-api/v2/markets"
+    async with _SEMAPHORE:
+        async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
+            response = await client.get(
+                "/markets",
+                params={"event_ticker": event_ticker, "status": "open", "limit": "20"},
+                headers=_auth_headers("GET", path),
+            )
+            response.raise_for_status()
+            return response.json().get("markets", [])
+
+
+async def list_markets_by_category(category: str) -> list[dict]:
+    if category in _EVENTS_CACHE:
+        return _EVENTS_CACHE[category]
+
+    events = await _fetch_events(category)
+
+    market_batches = await asyncio.gather(
+        *[_fetch_markets_by_event(e["event_ticker"]) for e in events],
+        return_exceptions=True,
+    )
+
+    seen: set[str] = set()
+    result: list[dict] = []
+    for event, batch in zip(events, market_batches):
+        if isinstance(batch, Exception):
+            continue
+        series_ticker = event.get("series_ticker", "")
+        for m in batch:
+            ticker = m.get("ticker", "")
+            if ticker and ticker not in seen:
+                seen.add(ticker)
+                result.append({**m, "series_ticker": series_ticker})
+
+    _EVENTS_CACHE[category] = result
+    return result
+
+
+@_KALSHI_RETRY
 async def get_market(ticker: str) -> dict:
     path = f"/trade-api/v2/markets/{ticker}"
     async with _SEMAPHORE:
@@ -104,12 +160,14 @@ async def get_market(ticker: str) -> dict:
 
 
 @_KALSHI_RETRY
-async def _fetch_candlesticks(ticker: str, params: dict[str, str]) -> list[dict]:
-    path = f"/trade-api/v2/markets/{ticker}/candlesticks"
+async def _fetch_candlesticks(
+    ticker: str, series_ticker: str, params: dict[str, str]
+) -> list[dict]:
+    path = f"/trade-api/v2/series/{series_ticker}/markets/{ticker}/candlesticks"
     async with _SEMAPHORE:
         async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
             response = await client.get(
-                f"/markets/{ticker}/candlesticks",
+                f"/series/{series_ticker}/markets/{ticker}/candlesticks",
                 params=params,
                 headers=_auth_headers("GET", path),
             )
@@ -118,7 +176,9 @@ async def _fetch_candlesticks(ticker: str, params: dict[str, str]) -> list[dict]
             return sorted(candles, key=lambda c: c["end_period_ts"])
 
 
-async def get_candlesticks(ticker: str, days: int = 7) -> list[dict]:
+async def get_candlesticks(
+    ticker: str, series_ticker: str, days: int = 7
+) -> list[dict]:
     cache_key = (ticker, days)
     if cache_key in _CANDLESTICK_CACHE:
         return _CANDLESTICK_CACHE[cache_key]
@@ -132,7 +192,7 @@ async def get_candlesticks(ticker: str, days: int = 7) -> list[dict]:
         "period_interval": "1440",
     }
     try:
-        result = await _fetch_candlesticks(ticker, params)
+        result = await _fetch_candlesticks(ticker, series_ticker, params)
     except Exception as exc:
         _CANDLESTICK_FAILURE_CACHE[cache_key] = exc
         raise
@@ -141,8 +201,11 @@ async def get_candlesticks(ticker: str, days: int = 7) -> list[dict]:
 
 
 def _candle_mid_price(candle: dict) -> float:
-    bid = candle.get("yes_bid", 0.0)
-    ask = candle.get("yes_ask", 0.0)
+    bid_data = candle.get("yes_bid") or {}
+    ask_data = candle.get("yes_ask") or {}
+    # Candle prices are nested dicts with close_dollars as a decimal string
+    bid = float(bid_data.get("close_dollars") or 0)
+    ask = float(ask_data.get("close_dollars") or 0)
     if bid and ask:
         return (bid + ask) / 2
     return bid or ask or 0.0
@@ -168,7 +231,7 @@ def market_to_card_fields(market: dict, candles: list[dict]) -> dict:
         min(max(_candle_mid_price(candles[0]) if candles else 0.0, 0.0), 1.0), 4
     )
     probability_move = round(current_prob - first_prob, 4)
-    volume = market.get("volume", 0)
+    volume = sum(float(c.get("volume_fp") or 0) for c in candles)
     return {
         "id": market.get("ticker", ""),
         "platform": "Kalshi",
@@ -176,6 +239,6 @@ def market_to_card_fields(market: dict, candles: list[dict]) -> dict:
         "headline": market.get("title", ""),
         "current_probability": current_prob,
         "probability_move": probability_move,
-        "volume_usd": float(volume),
+        "volume_usd": volume,
         "sparkline": sparkline,
     }

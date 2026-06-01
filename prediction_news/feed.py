@@ -2,7 +2,11 @@ import asyncio
 import logging
 
 from prediction_news.articles.rss import fetch_articles
-from prediction_news.kalshi import get_candlesticks, list_markets, market_to_card_fields
+from prediction_news.kalshi import (
+    get_candlesticks,
+    list_markets_by_category,
+    market_to_card_fields,
+)
 from prediction_news.models import StoryCard
 from prediction_news.ranking import rank_cards
 from prediction_news.services.llm import (
@@ -13,17 +17,20 @@ from prediction_news.services.llm import (
 
 logger = logging.getLogger(__name__)
 
-DOMAIN_SERIES: dict[str, list[str]] = {
-    "politics": ["KXPRESIDENT", "KXCONGRESS", "KXELECTION", "KXGOV"],
-    "world": ["KXWORLD", "KXGEO", "KXCLIMATE"],
-    "sports": ["KXNFL", "KXNBA", "KXMLB", "KXSPORTS"],
+DOMAIN_CATEGORIES: dict[str, list[str]] = {
+    "politics": ["Politics", "Elections"],
+    "world": ["World", "Economics", "Science and Technology", "Climate and Weather"],
+    "sports": ["Sports", "Entertainment"],
 }
 
 
 async def _build_card(market: dict, domain: str) -> StoryCard | None:
     ticker = market.get("ticker", "")
+    series_ticker = market.get("series_ticker", "")
+    if not series_ticker:
+        return None
     try:
-        candles = await get_candlesticks(ticker, days=7)
+        candles = await get_candlesticks(ticker, series_ticker, days=7)
     except Exception:
         logger.warning("Failed to fetch candlesticks for %s", ticker)
         return None
@@ -51,13 +58,13 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
 
 
 async def build_feed(domain: str) -> list[StoryCard]:
-    series_list = DOMAIN_SERIES.get(domain, [])
-    if not series_list:
+    categories = DOMAIN_CATEGORIES.get(domain, [])
+    if not categories:
         return []
 
     try:
         market_lists = await asyncio.gather(
-            *[list_markets(series=s) for s in series_list]
+            *[list_markets_by_category(cat) for cat in categories]
         )
         seen: set[str] = set()
         all_markets = []

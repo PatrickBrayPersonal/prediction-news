@@ -15,8 +15,8 @@ app = FastAPI(title="PredictionNews")
 
 @app.on_event("startup")
 async def _check_config() -> None:
-    if not settings.kalshi_api_key:
-        logger.warning("KALSHI_API_KEY is not set — all Kalshi requests will 401")
+    if not settings.kalshi_key_id:
+        logger.warning("KALSHI_KEY_ID is not set — all Kalshi requests will 401")
 
 
 app.add_middleware(

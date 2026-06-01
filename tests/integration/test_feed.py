@@ -7,18 +7,32 @@ from prediction_news.models import Source, StoryCard
 SAMPLE_MARKET = {
     "ticker": "KXELECTION-24-DEM",
     "title": "Will Democrats win the 2024 presidential election?",
-    "yes_bid": 0.45,
-    "yes_ask": 0.47,
-    "volume": 5_000_000,
-    "open_interest": 1_000_000,
+    "yes_bid": {"close_dollars": "0.45"},
+    "yes_ask": {"close_dollars": "0.47"},
+    "volume_fp": "5000000.00",
     "status": "open",
     "series_ticker": "KXELECTION",
 }
 
 SAMPLE_CANDLES = [
-    {"end_period_ts": 1700000000, "yes_bid": 0.40, "yes_ask": 0.42, "volume": 100_000},
-    {"end_period_ts": 1700086400, "yes_bid": 0.44, "yes_ask": 0.48, "volume": 120_000},
-    {"end_period_ts": 1700172800, "yes_bid": 0.50, "yes_ask": 0.54, "volume": 90_000},
+    {
+        "end_period_ts": 1700000000,
+        "yes_bid": {"close_dollars": "0.40"},
+        "yes_ask": {"close_dollars": "0.42"},
+        "volume_fp": "100000.00",
+    },
+    {
+        "end_period_ts": 1700086400,
+        "yes_bid": {"close_dollars": "0.44"},
+        "yes_ask": {"close_dollars": "0.48"},
+        "volume_fp": "120000.00",
+    },
+    {
+        "end_period_ts": 1700172800,
+        "yes_bid": {"close_dollars": "0.50"},
+        "yes_ask": {"close_dollars": "0.54"},
+        "volume_fp": "90000.00",
+    },
 ]
 
 SAMPLE_SOURCE = Source(
@@ -31,7 +45,7 @@ SAMPLE_NOTE = "A 10pp move in a $5M market is highly significant."
 async def test_build_feed_returns_story_cards():
     with (
         patch(
-            "prediction_news.feed.list_markets",
+            "prediction_news.feed.list_markets_by_category",
             new=AsyncMock(return_value=[SAMPLE_MARKET]),
         ),
         patch(
@@ -68,42 +82,42 @@ async def test_build_feed_cards_are_ranked():
     high_candles = [
         {
             "end_period_ts": 1700000000,
-            "yes_bid": 0.10,
-            "yes_ask": 0.12,
-            "volume": 10_000,
+            "yes_bid": {"close_dollars": "0.10"},
+            "yes_ask": {"close_dollars": "0.12"},
+            "volume_fp": "10000.00",
         },
         {
             "end_period_ts": 1700172800,
-            "yes_bid": 0.90,
-            "yes_ask": 0.92,
-            "volume": 50_000,
+            "yes_bid": {"close_dollars": "0.90"},
+            "yes_ask": {"close_dollars": "0.92"},
+            "volume_fp": "50000.00",
         },
     ]
     low_candles = [
         {
             "end_period_ts": 1700000000,
-            "yes_bid": 0.48,
-            "yes_ask": 0.50,
-            "volume": 10_000,
+            "yes_bid": {"close_dollars": "0.48"},
+            "yes_ask": {"close_dollars": "0.50"},
+            "volume_fp": "10000.00",
         },
         {
             "end_period_ts": 1700172800,
-            "yes_bid": 0.50,
-            "yes_ask": 0.52,
-            "volume": 10_000,
+            "yes_bid": {"close_dollars": "0.50"},
+            "yes_ask": {"close_dollars": "0.52"},
+            "volume_fp": "10000.00",
         },
     ]
-    market_high = {**SAMPLE_MARKET, "ticker": "KXELECTION-HIGH", "volume": 10_000_000}
-    market_low = {**SAMPLE_MARKET, "ticker": "KXELECTION-LOW", "volume": 100_000}
+    market_high = {**SAMPLE_MARKET, "ticker": "KXELECTION-HIGH"}
+    market_low = {**SAMPLE_MARKET, "ticker": "KXELECTION-LOW"}
 
     candles_by_ticker = {"KXELECTION-HIGH": high_candles, "KXELECTION-LOW": low_candles}
 
-    async def mock_candlesticks(ticker, days=7):
+    async def mock_candlesticks(ticker, series_ticker, days=7):
         return candles_by_ticker[ticker]
 
     with (
         patch(
-            "prediction_news.feed.list_markets",
+            "prediction_news.feed.list_markets_by_category",
             new=AsyncMock(return_value=[market_high, market_low]),
         ),
         patch("prediction_news.feed.get_candlesticks", side_effect=mock_candlesticks),
@@ -130,7 +144,7 @@ async def test_build_feed_cards_are_ranked():
 
 async def test_build_feed_handles_kalshi_failure():
     with patch(
-        "prediction_news.feed.list_markets",
+        "prediction_news.feed.list_markets_by_category",
         new=AsyncMock(side_effect=Exception("API down")),
     ):
         result = await build_feed("politics")
@@ -139,7 +153,7 @@ async def test_build_feed_handles_kalshi_failure():
 
 async def test_build_feed_unknown_domain_returns_empty():
     with patch(
-        "prediction_news.feed.list_markets", new=AsyncMock(return_value=[])
+        "prediction_news.feed.list_markets_by_category", new=AsyncMock(return_value=[])
     ) as mock_list:
         result = await build_feed("unknown_domain")
     mock_list.assert_not_called()

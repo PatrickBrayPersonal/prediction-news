@@ -24,21 +24,21 @@ SAMPLE_MARKET = {
 SAMPLE_CANDLES = [
     {
         "end_period_ts": 1700000000,
-        "yes_bid": 0.40,
-        "yes_ask": 0.42,
-        "volume": 100000,
+        "yes_bid": {"close_dollars": "0.40"},
+        "yes_ask": {"close_dollars": "0.42"},
+        "volume_fp": "100000.00",
     },
     {
         "end_period_ts": 1700086400,
-        "yes_bid": 0.44,
-        "yes_ask": 0.48,
-        "volume": 120000,
+        "yes_bid": {"close_dollars": "0.44"},
+        "yes_ask": {"close_dollars": "0.48"},
+        "volume_fp": "120000.00",
     },
     {
         "end_period_ts": 1700172800,
-        "yes_bid": 0.50,
-        "yes_ask": 0.54,
-        "volume": 90000,
+        "yes_bid": {"close_dollars": "0.50"},
+        "yes_ask": {"close_dollars": "0.54"},
+        "volume_fp": "90000.00",
     },
 ]
 
@@ -98,7 +98,7 @@ async def test_get_candlesticks_returns_sorted_points(monkeypatch):
     monkeypatch.setenv("KALSHI_PRIVATE_KEY_PATH", "tests/fixtures/test.key")
     mock_client = _make_mock_client({"candlesticks": SAMPLE_CANDLES})
     with patch("prediction_news.kalshi.httpx.AsyncClient", return_value=mock_client):
-        candles = await get_candlesticks("KXELECTION-24-DEM", days=3)
+        candles = await get_candlesticks("KXELECTION-24-DEM", "KXELECTION", days=3)
     assert len(candles) == 3
     assert candles[0]["end_period_ts"] <= candles[-1]["end_period_ts"]
 
@@ -130,7 +130,13 @@ def test_market_to_card_fields_computes_move():
 
 def test_market_to_card_fields_probability_move_direction():
     card_fields = market_to_card_fields(SAMPLE_MARKET, SAMPLE_CANDLES)
-    first_prob = (SAMPLE_CANDLES[0]["yes_bid"] + SAMPLE_CANDLES[0]["yes_ask"]) / 2
-    last_prob = (SAMPLE_CANDLES[-1]["yes_bid"] + SAMPLE_CANDLES[-1]["yes_ask"]) / 2
+    first_prob = (
+        float(SAMPLE_CANDLES[0]["yes_bid"]["close_dollars"])
+        + float(SAMPLE_CANDLES[0]["yes_ask"]["close_dollars"])
+    ) / 2
+    last_prob = (
+        float(SAMPLE_CANDLES[-1]["yes_bid"]["close_dollars"])
+        + float(SAMPLE_CANDLES[-1]["yes_ask"]["close_dollars"])
+    ) / 2
     expected_move = round(last_prob - first_prob, 4)
     assert abs(card_fields["probability_move"] - expected_move) < 0.001
