@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from prediction_news.config import settings
 from prediction_news.models import SparklinePoint
 
-KALSHI_BASE = "https://trading-api.kalshi.com/trade-api/v2"
+KALSHI_BASE = "https://external-api.kalshi.com/trade-api/v2"
 
 _REPO_ROOT = Path(__file__).parent.parent
 
