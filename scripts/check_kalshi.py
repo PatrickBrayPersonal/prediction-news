@@ -15,7 +15,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 load_dotenv()
 
 
-
 async def main() -> None:
     from prediction_news.config import settings
     from prediction_news.kalshi import _REPO_ROOT
