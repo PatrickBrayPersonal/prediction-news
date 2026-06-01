@@ -8,6 +8,7 @@ from prediction_news.kalshi import (
     list_markets_by_category,
     market_to_card_fields,
 )
+from prediction_news.keywords import extract_keywords
 from prediction_news.models import StoryCard
 from prediction_news.ranking import rank_cards
 from prediction_news.services.llm import (
@@ -40,10 +41,11 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
         return None
 
     card_fields = market_to_card_fields(market, candles)
-    keywords = card_fields["market_name"].split()
+    yes_sub_title = market.get("yes_sub_title", "")
+    keywords = extract_keywords(card_fields["market_name"], yes_sub_title)
     logger.info(
         f"_build_card ticker={ticker} prob_move={card_fields['probability_move']:.4f}"
-        f" volume={card_fields['volume_usd']:.2f} keywords={keywords[:5]}"
+        f" volume={card_fields['volume_usd']:.2f} keywords={keywords}"
     )
 
     articles = fetch_articles(keywords, domain)

@@ -249,6 +249,17 @@ def candlesticks_to_sparkline(candles: list[dict]) -> list[SparklinePoint]:
     return points
 
 
+def _resolve_headline(title: str, yes_sub_title: str) -> str:
+    """Fill in the subject blank in templated Kalshi market titles.
+
+    Kalshi returns titles like "Will  become President..." with a double-space
+    where the candidate name belongs. yes_sub_title holds the actual name.
+    """
+    if yes_sub_title and "  " in title:
+        return title.replace("  ", f" {yes_sub_title} ", 1)
+    return title
+
+
 def market_to_card_fields(market: dict, candles: list[dict]) -> dict:
     sparkline = candlesticks_to_sparkline(candles)
     current_prob = round(
@@ -259,11 +270,14 @@ def market_to_card_fields(market: dict, candles: list[dict]) -> dict:
     )
     probability_move = round(current_prob - first_prob, 4)
     volume = sum(float(c.get("volume_fp") or 0) for c in candles)
+    title = market.get("title", "")
+    yes_sub_title = market.get("yes_sub_title", "").strip()
+    headline = _resolve_headline(title, yes_sub_title)
     return {
         "id": market.get("ticker", ""),
         "platform": "Kalshi",
-        "market_name": market.get("title", ""),
-        "headline": market.get("title", ""),
+        "market_name": headline,
+        "headline": headline,
         "current_probability": current_prob,
         "probability_move": probability_move,
         "volume_usd": volume,

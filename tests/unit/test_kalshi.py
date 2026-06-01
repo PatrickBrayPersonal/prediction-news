@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from prediction_news.kalshi import (
     _auth_headers,
     _load_private_key,
+    _resolve_headline,
     candlesticks_to_sparkline,
     get_candlesticks,
     list_markets,
@@ -126,6 +127,43 @@ def test_market_to_card_fields_computes_move():
     assert "volume_usd" in card_fields
     assert "sparkline" in card_fields
     assert -1.0 <= card_fields["probability_move"] <= 1.0
+
+
+def test_resolve_headline_fills_double_space_blank():
+    result = _resolve_headline("Will  become President before 2045?", "Gavin Newsom")
+    assert result == "Will Gavin Newsom become President before 2045?"
+
+
+def test_resolve_headline_no_double_space_unchanged():
+    result = _resolve_headline("Who will be the next Pope?", "Peter Erdo")
+    assert result == "Who will be the next Pope?"
+
+
+def test_resolve_headline_empty_sub_title_unchanged():
+    result = _resolve_headline("Will  become President before 2045?", "")
+    assert result == "Will  become President before 2045?"
+
+
+def test_resolve_headline_replaces_only_first_blank():
+    result = _resolve_headline("Will  beat  in 2028?", "Alice")
+    assert result == "Will Alice beat  in 2028?"
+
+
+def test_market_to_card_fields_uses_yes_sub_title():
+    market_with_sub = {
+        **SAMPLE_MARKET,
+        "title": "Will  become President of the United States before 2045?",
+        "yes_sub_title": "Gavin Newsom",
+    }
+    card_fields = market_to_card_fields(market_with_sub, SAMPLE_CANDLES)
+    assert card_fields["headline"] == "Will Gavin Newsom become President of the United States before 2045?"
+    assert card_fields["market_name"] == card_fields["headline"]
+
+
+def test_market_to_card_fields_no_sub_title_uses_raw_title():
+    market_without_sub = {**SAMPLE_MARKET, "title": "Will  become President before 2045?"}
+    card_fields = market_to_card_fields(market_without_sub, SAMPLE_CANDLES)
+    assert card_fields["headline"] == "Will  become President before 2045?"
 
 
 def test_market_to_card_fields_probability_move_direction():

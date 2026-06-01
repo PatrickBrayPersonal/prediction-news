@@ -82,7 +82,8 @@ async def main() -> None:
     print("\nFirst 3 markets (full detail):")
     for m in markets[:3]:
         print(
-            f"  ticker={m.get('ticker')}  title={m.get('title', '')[:60]}  series={m.get('series_ticker')}"
+            f"  ticker={m.get('ticker')}  title={m.get('title', '')[:60]}"
+            f"  yes_sub_title={m.get('yes_sub_title', '')}  series={m.get('series_ticker')}"
         )
 
 
