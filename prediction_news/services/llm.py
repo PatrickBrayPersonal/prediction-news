@@ -1,12 +1,10 @@
 import json
-import logging
 
 from anthropic import AsyncAnthropic
+from loguru import logger
 
 from prediction_news.config import settings
 from prediction_news.models import Source
-
-logger = logging.getLogger(__name__)
 
 HAIKU_MODEL = "claude-haiku-4-5-20251001"
 SONNET_MODEL = "claude-sonnet-4-6"
@@ -32,9 +30,7 @@ async def prefilter_articles(market_name: str, articles: list[Source]) -> list[S
         messages=[{"role": "user", "content": prompt}],
     )
     logger.info(
-        "prefilter_articles tokens: input=%d output=%d",
-        response.usage.input_tokens,
-        response.usage.output_tokens,
+        f"prefilter_articles tokens: input={response.usage.input_tokens} output={response.usage.output_tokens}"
     )
 
     try:
@@ -67,9 +63,7 @@ async def score_and_summarize(
         messages=[{"role": "user", "content": prompt}],
     )
     logger.info(
-        "score_and_summarize tokens: input=%d output=%d",
-        response.usage.input_tokens,
-        response.usage.output_tokens,
+        f"score_and_summarize tokens: input={response.usage.input_tokens} output={response.usage.output_tokens}"
     )
 
     summary = ""
@@ -101,9 +95,7 @@ async def generate_calibration_note(probability_move: float, volume_usd: float) 
         messages=[{"role": "user", "content": prompt}],
     )
     logger.info(
-        "generate_calibration_note tokens: input=%d output=%d",
-        response.usage.input_tokens,
-        response.usage.output_tokens,
+        f"generate_calibration_note tokens: input={response.usage.input_tokens} output={response.usage.output_tokens}"
     )
 
     return response.content[0].text.strip()

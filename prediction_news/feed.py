@@ -1,5 +1,6 @@
 import asyncio
-import logging
+
+from loguru import logger
 
 from prediction_news.articles.rss import fetch_articles
 from prediction_news.kalshi import (
@@ -15,8 +16,6 @@ from prediction_news.services.llm import (
     score_and_summarize,
 )
 
-logger = logging.getLogger(__name__)
-
 DOMAIN_CATEGORIES: dict[str, list[str]] = {
     "politics": ["Politics", "Elections"],
     "world": ["World", "Economics", "Science and Technology", "Climate and Weather"],
@@ -28,41 +27,33 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
     ticker = market.get("ticker", "")
     series_ticker = market.get("series_ticker", "")
     if not series_ticker:
-        logger.debug("_build_card skipping ticker=%s: no series_ticker", ticker)
+        logger.debug(f"_build_card skipping ticker={ticker}: no series_ticker")
         return None
     try:
         candles = await get_candlesticks(ticker, series_ticker, days=7)
     except Exception:
-        logger.warning("Failed to fetch candlesticks for %s", ticker)
+        logger.warning(f"Failed to fetch candlesticks for {ticker}")
         return None
 
     if not candles:
-        logger.debug("_build_card skipping ticker=%s: 0 candles returned", ticker)
+        logger.debug(f"_build_card skipping ticker={ticker}: 0 candles returned")
         return None
 
     card_fields = market_to_card_fields(market, candles)
     keywords = card_fields["market_name"].split()
     logger.info(
-        "_build_card ticker=%s prob_move=%.4f volume=%.2f keywords=%s",
-        ticker,
-        card_fields["probability_move"],
-        card_fields["volume_usd"],
-        keywords[:5],
+        f"_build_card ticker={ticker} prob_move={card_fields['probability_move']:.4f}"
+        f" volume={card_fields['volume_usd']:.2f} keywords={keywords[:5]}"
     )
 
     articles = fetch_articles(keywords, domain)
-    logger.info("_build_card ticker=%s fetched %d raw articles", ticker, len(articles))
+    logger.info(f"_build_card ticker={ticker} fetched {len(articles)} raw articles")
 
     filtered = await prefilter_articles(card_fields["market_name"], articles)
-    logger.info(
-        "_build_card ticker=%s prefilter: %d/%d articles passed",
-        ticker,
-        len(filtered),
-        len(articles),
-    )
+    logger.info(f"_build_card ticker={ticker} prefilter: {len(filtered)}/{len(articles)} articles passed")
 
     summary, sources = await score_and_summarize(card_fields["market_name"], filtered)
-    logger.info("_build_card ticker=%s score_and_summarize returned %d sources", ticker, len(sources))
+    logger.info(f"_build_card ticker={ticker} score_and_summarize returned {len(sources)} sources")
 
     calibration_note = await generate_calibration_note(
         card_fields["probability_move"], card_fields["volume_usd"]
@@ -79,9 +70,9 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
 
 async def build_feed(domain: str) -> list[StoryCard]:
     categories = DOMAIN_CATEGORIES.get(domain, [])
-    logger.info("build_feed domain=%s categories=%s", domain, categories)
+    logger.info(f"build_feed domain={domain} categories={categories}")
     if not categories:
-        logger.warning("build_feed unknown domain=%s, returning empty feed", domain)
+        logger.warning(f"build_feed unknown domain={domain}, returning empty feed")
         return []
 
     try:
@@ -97,15 +88,10 @@ async def build_feed(domain: str) -> list[StoryCard]:
                     seen.add(ticker)
                     all_markets.append(m)
     except Exception as exc:
-        logger.error(
-            "Failed to fetch markets from Kalshi for domain=%s: %s",
-            domain,
-            exc,
-            exc_info=True,
-        )
+        logger.exception(f"Failed to fetch markets from Kalshi for domain={domain}: {exc}")
         return []
 
-    logger.info("build_feed domain=%s: %d total unique markets to process", domain, len(all_markets))
+    logger.info(f"build_feed domain={domain}: {len(all_markets)} total unique markets to process")
 
     results = await asyncio.gather(
         *[_build_card(market, domain) for market in all_markets],
@@ -115,9 +101,9 @@ async def build_feed(domain: str) -> list[StoryCard]:
     errors = [r for r in results if isinstance(r, Exception)]
     cards = [r for r in results if isinstance(r, StoryCard)]
     if errors:
-        logger.warning("build_feed domain=%s: %d cards failed with exceptions", domain, len(errors))
-    logger.info("build_feed domain=%s: %d/%d cards built successfully", domain, len(cards), len(all_markets))
+        logger.warning(f"build_feed domain={domain}: {len(errors)} cards failed with exceptions")
+    logger.info(f"build_feed domain={domain}: {len(cards)}/{len(all_markets)} cards built successfully")
 
     ranked = rank_cards(cards)
-    logger.info("build_feed domain=%s: returning %d ranked cards", domain, len(ranked))
+    logger.info(f"build_feed domain={domain}: returning {len(ranked)} ranked cards")
     return ranked

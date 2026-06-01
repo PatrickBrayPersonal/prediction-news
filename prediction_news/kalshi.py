@@ -1,6 +1,5 @@
 import asyncio
 import base64
-import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,12 +8,11 @@ import httpx
 from cachetools import TTLCache
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from loguru import logger
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from prediction_news.config import settings
 from prediction_news.models import SparklinePoint
-
-logger = logging.getLogger(__name__)
 
 KALSHI_BASE = "https://external-api.kalshi.com/trade-api/v2"
 
@@ -85,14 +83,14 @@ async def _fetch_markets(params: dict[str, str]) -> list[dict]:
 async def list_markets(series: str | None = None) -> list[dict]:
     cache_key = series or "__all__"
     if cache_key in _MARKET_LIST_CACHE:
-        logger.debug("list_markets cache hit for key=%s", cache_key)
+        logger.debug(f"list_markets cache hit for key={cache_key}")
         return _MARKET_LIST_CACHE[cache_key]
-    logger.debug("list_markets fetching from API for key=%s", cache_key)
+    logger.debug(f"list_markets fetching from API for key={cache_key}")
     params: dict[str, str] = {"status": "open", "limit": "100"}
     if series:
         params["series_ticker"] = series
     result = await _fetch_markets(params)
-    logger.info("list_markets fetched %d markets for key=%s", len(result), cache_key)
+    logger.info(f"list_markets fetched {len(result)} markets for key={cache_key}")
     _MARKET_LIST_CACHE[cache_key] = result
     return result
 
@@ -127,12 +125,12 @@ async def _fetch_markets_by_event(event_ticker: str) -> list[dict]:
 
 async def list_markets_by_category(category: str) -> list[dict]:
     if category in _EVENTS_CACHE:
-        logger.debug("list_markets_by_category cache hit for category=%s", category)
+        logger.debug(f"list_markets_by_category cache hit for category={category}")
         return _EVENTS_CACHE[category]
 
-    logger.info("list_markets_by_category fetching events for category=%s", category)
+    logger.info(f"list_markets_by_category fetching events for category={category}")
     events = await _fetch_events(category)
-    logger.info("list_markets_by_category got %d events for category=%s", len(events), category)
+    logger.info(f"list_markets_by_category got {len(events)} events for category={category}")
 
     market_batches = await asyncio.gather(
         *[_fetch_markets_by_event(e["event_ticker"]) for e in events],
@@ -145,9 +143,8 @@ async def list_markets_by_category(category: str) -> list[dict]:
     for event, batch in zip(events, market_batches):
         if isinstance(batch, Exception):
             logger.warning(
-                "list_markets_by_category failed to fetch markets for event=%s: %s",
-                event.get("event_ticker", "?"),
-                batch,
+                f"list_markets_by_category failed to fetch markets"
+                f" for event={event.get('event_ticker', '?')}: {batch}"
             )
             failed += 1
             continue
@@ -159,17 +156,13 @@ async def list_markets_by_category(category: str) -> list[dict]:
                 seen.add(ticker)
                 result.append({**m, "series_ticker": series_ticker})
         logger.debug(
-            "event=%s added %d markets (batch size=%d)",
-            event.get("event_ticker", "?"),
-            len(result) - before,
-            len(batch),
+            f"event={event.get('event_ticker', '?')} added {len(result) - before}"
+            f" markets (batch size={len(batch)})"
         )
 
     logger.info(
-        "list_markets_by_category category=%s: %d total markets, %d events failed",
-        category,
-        len(result),
-        failed,
+        f"list_markets_by_category category={category}:"
+        f" {len(result)} total markets, {failed} events failed"
     )
     _EVENTS_CACHE[category] = result
     return result
@@ -210,10 +203,10 @@ async def get_candlesticks(
 ) -> list[dict]:
     cache_key = (ticker, days)
     if cache_key in _CANDLESTICK_CACHE:
-        logger.debug("get_candlesticks cache hit for ticker=%s days=%d", ticker, days)
+        logger.debug(f"get_candlesticks cache hit for ticker={ticker} days={days}")
         return _CANDLESTICK_CACHE[cache_key]
     if cache_key in _CANDLESTICK_FAILURE_CACHE:
-        logger.debug("get_candlesticks failure cache hit for ticker=%s, skipping", ticker)
+        logger.debug(f"get_candlesticks failure cache hit for ticker={ticker}, skipping")
         raise _CANDLESTICK_FAILURE_CACHE[cache_key]
     end_ts = int(time.time())
     start_ts = end_ts - days * 86400
@@ -222,14 +215,14 @@ async def get_candlesticks(
         "end_ts": str(end_ts),
         "period_interval": "1440",
     }
-    logger.debug("get_candlesticks fetching ticker=%s series=%s days=%d", ticker, series_ticker, days)
+    logger.debug(f"get_candlesticks fetching ticker={ticker} series={series_ticker} days={days}")
     try:
         result = await _fetch_candlesticks(ticker, series_ticker, params)
     except Exception as exc:
-        logger.warning("get_candlesticks fetch failed for ticker=%s: %s", ticker, exc)
+        logger.warning(f"get_candlesticks fetch failed for ticker={ticker}: {exc}")
         _CANDLESTICK_FAILURE_CACHE[cache_key] = exc
         raise
-    logger.info("get_candlesticks ticker=%s returned %d candles", ticker, len(result))
+    logger.info(f"get_candlesticks ticker={ticker} returned {len(result)} candles")
     _CANDLESTICK_CACHE[cache_key] = result
     return result
 
