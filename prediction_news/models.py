@@ -33,7 +33,6 @@ class StoryCard(BaseModel):
     open_interest: float
     sparkline: list[SparklinePoint]
     summary: str
-    calibration_note: str
     sources: list[Source]
 
     @field_validator("current_probability")

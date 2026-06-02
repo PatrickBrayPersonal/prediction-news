@@ -42,9 +42,6 @@ SAMPLE_SOURCE = Source(
     title="Election article", url="https://reuters.com/1", type="rss"
 )
 SAMPLE_SUMMARY = "Democrats gained ground after a strong debate performance."
-SAMPLE_NOTE = "A 10pp move in a $5M market is highly significant."
-
-
 async def test_build_feed_returns_story_cards():
     with (
         patch(
@@ -64,10 +61,6 @@ async def test_build_feed_returns_story_cards():
             "prediction_news.feed.score_and_summarize",
             new=AsyncMock(return_value=(SAMPLE_SUMMARY, [SAMPLE_SOURCE])),
         ),
-        patch(
-            "prediction_news.feed.generate_calibration_note",
-            new=AsyncMock(return_value=SAMPLE_NOTE),
-        ),
     ):
         result = await build_feed("politics")
 
@@ -77,7 +70,6 @@ async def test_build_feed_returns_story_cards():
     assert card.domain == "politics"
     assert card.platform == "Kalshi"
     assert card.summary == SAMPLE_SUMMARY
-    assert card.calibration_note == SAMPLE_NOTE
     assert card.sources == [SAMPLE_SOURCE]
 
 
@@ -138,10 +130,6 @@ async def test_build_feed_cards_are_ranked():
         patch(
             "prediction_news.feed.score_and_summarize",
             new=AsyncMock(return_value=(SAMPLE_SUMMARY, [SAMPLE_SOURCE])),
-        ),
-        patch(
-            "prediction_news.feed.generate_calibration_note",
-            new=AsyncMock(return_value=SAMPLE_NOTE),
         ),
     ):
         result = await build_feed("politics")

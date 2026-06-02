@@ -78,24 +78,3 @@ async def score_and_summarize(
             ranked_sources = [url_to_source[u] for u in urls if u in url_to_source]
 
     return (summary, ranked_sources)
-
-
-async def generate_calibration_note(probability_move: float, volume_usd: float) -> str:
-    client = AsyncAnthropic(api_key=settings.anthropic_api_key)
-    move_pct = round(abs(probability_move) * 100, 1)
-    prompt = (
-        f"You are writing a one-sentence calibration note for a prediction market move.\n\n"
-        f"The market moved {move_pct} percentage points. The market has ${volume_usd:,.0f} in volume.\n\n"
-        f"Write a single sentence contextualizing how significant this move is. Be concise and specific."
-    )
-
-    response = await client.messages.create(
-        model=SONNET_MODEL,
-        max_tokens=100,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    logger.info(
-        f"generate_calibration_note tokens: input={response.usage.input_tokens} output={response.usage.output_tokens}"
-    )
-
-    return response.content[0].text.strip()

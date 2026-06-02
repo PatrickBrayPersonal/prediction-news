@@ -54,6 +54,5 @@ def sample_story_card(sample_sparkline, sample_source):
         "open_interest": 250000.0,
         "sparkline": sample_sparkline,
         "summary": "Test summary of market movement.",
-        "calibration_note": "A 10pp move in a $100k market warrants moderate attention.",
         "sources": [sample_source],
     }

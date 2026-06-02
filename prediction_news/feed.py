@@ -14,7 +14,6 @@ from prediction_news.keywords import extract_keywords
 from prediction_news.models import StoryCard
 from prediction_news.ranking import filter_cards, rank_cards
 from prediction_news.services.llm import (
-    generate_calibration_note,
     prefilter_articles,
     score_and_summarize,
 )
@@ -82,15 +81,10 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
         f"_build_card ticker={ticker} score_and_summarize returned {len(sources)} sources"
     )
 
-    calibration_note = await generate_calibration_note(
-        card_fields["probability_move"], card_fields["volume_usd"]
-    )
-
     return StoryCard(
         **card_fields,
         domain=domain,
         summary=summary,
-        calibration_note=calibration_note,
         sources=sources,
     )
 

@@ -17,7 +17,6 @@ SAMPLE_CARD = StoryCard(
     open_interest=2_000_000.0,
     sparkline=[SparklinePoint(date="2024-01-01", probability=0.55)],
     summary="Test summary",
-    calibration_note="Test note",
     sources=[Source(title="Test", url="https://test.com", type="rss")],
 )
 
