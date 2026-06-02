@@ -1,9 +1,14 @@
+import re
 from datetime import datetime, timedelta, timezone
 
 import feedparser
 
 from prediction_news.config import settings
 from prediction_news.models import Source
+
+
+def _strip_html(text: str) -> str:
+    return re.sub(r"<[^>]+>", "", text).strip()
 
 RSS_FEEDS: dict[str, list[str]] = {
     "politics": [
@@ -64,6 +69,21 @@ def fetch_articles(
             if not _matches_keywords(entry, keywords):
                 continue
             seen_urls.add(url)
-            results.append(Source(title=entry.get("title", ""), url=url, type="rss"))
-
+            published_parsed = entry.get("published_parsed")
+            published_at = (
+                datetime(*published_parsed[:6], tzinfo=timezone.utc).isoformat()
+                if published_parsed
+                else None
+            )
+            raw_excerpt = entry.get("summary", "") or ""
+            excerpt = _strip_html(raw_excerpt) or None
+            results.append(
+                Source(
+                    title=entry.get("title", ""),
+                    url=url,
+                    type="rss",
+                    published_at=published_at,
+                    excerpt=excerpt,
+                )
+            )
     return results

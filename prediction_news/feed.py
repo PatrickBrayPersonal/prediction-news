@@ -8,15 +8,14 @@ from prediction_news.kalshi import (
     get_candlesticks,
     list_markets_by_category,
     market_to_card_fields,
-    max_single_day_move,
-    max_single_day_move_at,
+    most_recent_qualifying_move,
 )
 from prediction_news.keywords import extract_keywords
 from prediction_news.models import StoryCard
 from prediction_news.ranking import filter_cards, rank_cards
 from prediction_news.services.llm import (
     prefilter_articles,
-    score_and_summarize,
+    rank_sources,
 )
 
 DOMAIN_CATEGORIES: dict[str, list[str]] = {
@@ -44,15 +43,17 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
         logger.debug(f"_build_card skipping ticker={ticker}: 0 candles returned")
         return None
 
-    card_fields = market_to_card_fields(market, candles)
-
-    daily_move = max_single_day_move(candles)
-    if daily_move < settings.min_probability_move:
+    move_value, change_at = most_recent_qualifying_move(
+        candles, settings.min_probability_move
+    )
+    if not change_at:
         logger.debug(
-            f"_build_card skipping ticker={ticker}: max single-day move"
-            f" {daily_move:.4f} < {settings.min_probability_move}"
+            f"_build_card skipping ticker={ticker}: no single-day move"
+            f" >= {settings.min_probability_move}"
         )
         return None
+
+    card_fields = market_to_card_fields(market, candles, probability_move=move_value)
 
     open_interest = card_fields["open_interest"]
     if open_interest < settings.min_open_interest:
@@ -64,7 +65,6 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
 
     yes_sub_title = market.get("yes_sub_title", "")
     keywords = extract_keywords(card_fields["market_name"], yes_sub_title)
-    change_at = max_single_day_move_at(candles)
     logger.info(
         f"_build_card ticker={ticker} prob_move={card_fields['probability_move']:.4f}"
         f" open_interest={card_fields['open_interest']:.2f} keywords={keywords}"
@@ -79,10 +79,11 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
         f"_build_card ticker={ticker} prefilter: {len(filtered)}/{len(articles)} articles passed"
     )
 
-    summary, sources = await score_and_summarize(card_fields["market_name"], filtered)
+    sources = await rank_sources(card_fields["market_name"], filtered)
     logger.info(
-        f"_build_card ticker={ticker} score_and_summarize returned {len(sources)} sources"
+        f"_build_card ticker={ticker} rank_sources returned {len(sources)} sources"
     )
+    summary = sources[0].excerpt if sources else ""
 
     return StoryCard(
         **card_fields,

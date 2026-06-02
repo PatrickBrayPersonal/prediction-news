@@ -19,6 +19,8 @@ class Source(BaseModel):
     title: str
     url: str
     type: Literal["rss", "twitter", "manual"]
+    published_at: str | None = None
+    excerpt: str | None = None
 
 
 class StoryCard(BaseModel):

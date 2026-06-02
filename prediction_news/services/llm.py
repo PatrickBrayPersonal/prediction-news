@@ -40,41 +40,33 @@ async def prefilter_articles(market_name: str, articles: list[Source]) -> list[S
         return articles
 
 
-async def score_and_summarize(
-    market_name: str, articles: list[Source]
-) -> tuple[str, list[Source]]:
+async def rank_sources(market_name: str, articles: list[Source]) -> list[Source]:
     if not articles:
-        return ("", [])
+        return []
 
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
     article_list = "\n".join(f"- {a.title} ({a.url})" for a in articles)
     prompt = (
-        f"You are analyzing news articles and their relationship to a prediction market move.\n\n"
-        f"Market: {market_name}\n"
+        f"Rank the following news articles by relevance to this market: {market_name}\n\n"
         f"Articles:\n{article_list}\n\n"
         f"Respond in exactly this format:\n"
-        f"SUMMARY: <one paragraph explaining why the market moved>\n"
         f"SOURCES: <comma-separated list of URLs in order of relevance>"
     )
 
     response = await client.messages.create(
         model=SONNET_MODEL,
-        max_tokens=500,
+        max_tokens=200,
         messages=[{"role": "user", "content": prompt}],
     )
     logger.info(
-        f"score_and_summarize tokens: input={response.usage.input_tokens} output={response.usage.output_tokens}"
+        f"rank_sources tokens: input={response.usage.input_tokens} output={response.usage.output_tokens}"
     )
 
-    summary = ""
-    ranked_sources: list[Source] = articles
     url_to_source = {a.url: a for a in articles}
-
     for line in response.content[0].text.strip().split("\n"):
-        if line.startswith("SUMMARY:"):
-            summary = line[len("SUMMARY:") :].strip()
-        elif line.startswith("SOURCES:"):
-            urls = [u.strip() for u in line[len("SOURCES:") :].split(",")]
-            ranked_sources = [url_to_source[u] for u in urls if u in url_to_source]
+        if line.startswith("SOURCES:"):
+            urls = [u.strip() for u in line[len("SOURCES:"):].split(",")]
+            ranked = [url_to_source[u] for u in urls if u in url_to_source]
+            return ranked if ranked else articles
 
-    return (summary, ranked_sources)
+    return articles

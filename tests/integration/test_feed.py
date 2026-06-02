@@ -38,10 +38,13 @@ SAMPLE_CANDLES = [
     },
 ]
 
+SAMPLE_EXCERPT = "Democrats gained ground after a strong debate performance."
 SAMPLE_SOURCE = Source(
-    title="Election article", url="https://reuters.com/1", type="rss"
+    title="Election article",
+    url="https://reuters.com/1",
+    type="rss",
+    excerpt=SAMPLE_EXCERPT,
 )
-SAMPLE_SUMMARY = "Democrats gained ground after a strong debate performance."
 
 
 async def test_build_feed_returns_story_cards():
@@ -60,8 +63,8 @@ async def test_build_feed_returns_story_cards():
             new=AsyncMock(return_value=[SAMPLE_SOURCE]),
         ),
         patch(
-            "prediction_news.feed.score_and_summarize",
-            new=AsyncMock(return_value=(SAMPLE_SUMMARY, [SAMPLE_SOURCE])),
+            "prediction_news.feed.rank_sources",
+            new=AsyncMock(return_value=[SAMPLE_SOURCE]),
         ),
     ):
         result = await build_feed("politics")
@@ -71,7 +74,7 @@ async def test_build_feed_returns_story_cards():
     assert isinstance(card, StoryCard)
     assert card.domain == "politics"
     assert card.platform == "Kalshi"
-    assert card.summary == SAMPLE_SUMMARY
+    assert card.summary == SAMPLE_EXCERPT
     assert card.sources == [SAMPLE_SOURCE]
 
 
@@ -130,8 +133,8 @@ async def test_build_feed_cards_are_ranked():
             new=AsyncMock(return_value=[SAMPLE_SOURCE]),
         ),
         patch(
-            "prediction_news.feed.score_and_summarize",
-            new=AsyncMock(return_value=(SAMPLE_SUMMARY, [SAMPLE_SOURCE])),
+            "prediction_news.feed.rank_sources",
+            new=AsyncMock(return_value=[SAMPLE_SOURCE]),
         ),
     ):
         result = await build_feed("politics")

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from prediction_news.models import Source
 from prediction_news.services.llm import (
     prefilter_articles,
-    score_and_summarize,
+    rank_sources,
 )
 
 SAMPLE_SOURCES = [
@@ -58,20 +58,31 @@ async def test_prefilter_articles_empty_input_skips_api():
     assert result == []
 
 
-async def test_score_and_summarize_uses_sonnet():
-    text = "SUMMARY: Market moved on polling data.\nSOURCES: https://reuters.com/1"
-    mock_client = _make_mock_client(text)
+async def test_rank_sources_uses_sonnet():
+    mock_client = _make_mock_client("SOURCES: https://reuters.com/1")
     with patch("prediction_news.services.llm.AsyncAnthropic", return_value=mock_client):
-        await score_and_summarize("US Election 2024", SAMPLE_SOURCES)
+        await rank_sources("US Election 2024", SAMPLE_SOURCES)
     call_kwargs = mock_client.messages.create.call_args.kwargs
     assert "sonnet" in call_kwargs["model"]
 
 
-async def test_score_and_summarize_returns_summary_and_sources():
-    text = "SUMMARY: Market moved on polling data.\nSOURCES: https://reuters.com/1"
-    mock_client = _make_mock_client(text)
+async def test_rank_sources_returns_ranked_list():
+    mock_client = _make_mock_client("SOURCES: https://reuters.com/1")
     with patch("prediction_news.services.llm.AsyncAnthropic", return_value=mock_client):
-        summary, sources = await score_and_summarize("US Election 2024", SAMPLE_SOURCES)
-    assert summary == "Market moved on polling data."
+        sources = await rank_sources("US Election 2024", SAMPLE_SOURCES)
     assert len(sources) == 1
     assert sources[0].url == "https://reuters.com/1"
+
+
+async def test_rank_sources_empty_input_skips_api():
+    with patch("prediction_news.services.llm.AsyncAnthropic") as mock_cls:
+        result = await rank_sources("US Election 2024", [])
+    mock_cls.assert_not_called()
+    assert result == []
+
+
+async def test_rank_sources_falls_back_to_original_order_on_bad_response():
+    mock_client = _make_mock_client("I cannot determine relevance.")
+    with patch("prediction_news.services.llm.AsyncAnthropic", return_value=mock_client):
+        sources = await rank_sources("US Election 2024", SAMPLE_SOURCES)
+    assert sources == SAMPLE_SOURCES

@@ -278,24 +278,33 @@ def max_single_day_move(candles: list[dict]) -> float:
     return max(abs(prices[i] - prices[i - 1]) for i in range(1, len(prices)))
 
 
-def max_single_day_move_at(candles: list[dict]) -> datetime | None:
+def most_recent_qualifying_move(
+    candles: list[dict], min_move: float
+) -> tuple[float, datetime | None]:
+    """Return the signed move and end datetime of the most recent day where |move| >= min_move.
+
+    Walks backwards through sorted candles so that when multiple days qualify,
+    the most recent one wins. Returns (0.0, None) if no day qualifies.
+    """
     if len(candles) < 2:
-        return None
+        return (0.0, None)
     sorted_candles = sorted(candles, key=lambda c: c["end_period_ts"])
     prices = [_candle_mid_price(c) for c in sorted_candles]
-    max_idx = max(range(1, len(prices)), key=lambda i: abs(prices[i] - prices[i - 1]))
-    return datetime.fromtimestamp(sorted_candles[max_idx]["end_period_ts"], tz=timezone.utc)
+    for i in range(len(prices) - 1, 0, -1):
+        move = prices[i] - prices[i - 1]
+        if abs(move) >= min_move:
+            ts = sorted_candles[i]["end_period_ts"]
+            return (round(move, 4), datetime.fromtimestamp(ts, tz=timezone.utc))
+    return (0.0, None)
 
 
-def market_to_card_fields(market: dict, candles: list[dict]) -> dict:
+def market_to_card_fields(
+    market: dict, candles: list[dict], probability_move: float
+) -> dict:
     sparkline = candlesticks_to_sparkline(candles)
     current_prob = round(
         min(max(_candle_mid_price(candles[-1]) if candles else 0.0, 0.0), 1.0), 4
     )
-    first_prob = round(
-        min(max(_candle_mid_price(candles[0]) if candles else 0.0, 0.0), 1.0), 4
-    )
-    probability_move = round(current_prob - first_prob, 4)
     volume = sum(float(c.get("volume_fp") or 0) for c in candles)
     open_interest = float(candles[-1].get("open_interest_fp") or 0) if candles else 0.0
     title = market.get("title", "")

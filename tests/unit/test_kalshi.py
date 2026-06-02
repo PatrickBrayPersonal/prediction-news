@@ -10,6 +10,7 @@ from prediction_news.kalshi import (
     list_markets,
     market_to_card_fields,
     max_single_day_move,
+    most_recent_qualifying_move,
 )
 
 SAMPLE_MARKET = {
@@ -120,14 +121,14 @@ def test_candlesticks_to_sparkline_sorted_by_date():
 
 
 def test_market_to_card_fields_computes_move():
-    card_fields = market_to_card_fields(SAMPLE_MARKET, SAMPLE_CANDLES)
+    card_fields = market_to_card_fields(SAMPLE_MARKET, SAMPLE_CANDLES, probability_move=0.06)
     assert card_fields["platform"] == "Kalshi"
     assert card_fields["market_name"] == SAMPLE_MARKET["title"]
     assert "current_probability" in card_fields
     assert "probability_move" in card_fields
     assert "volume_usd" in card_fields
     assert "sparkline" in card_fields
-    assert -1.0 <= card_fields["probability_move"] <= 1.0
+    assert card_fields["probability_move"] == 0.06
 
 
 def test_resolve_headline_fills_double_space_blank():
@@ -156,7 +157,7 @@ def test_market_to_card_fields_uses_yes_sub_title():
         "title": "Will  become President of the United States before 2045?",
         "yes_sub_title": "Gavin Newsom",
     }
-    card_fields = market_to_card_fields(market_with_sub, SAMPLE_CANDLES)
+    card_fields = market_to_card_fields(market_with_sub, SAMPLE_CANDLES, probability_move=0.05)
     assert (
         card_fields["headline"]
         == "Will Gavin Newsom become President of the United States before 2045?"
@@ -169,22 +170,13 @@ def test_market_to_card_fields_no_sub_title_uses_raw_title():
         **SAMPLE_MARKET,
         "title": "Will  become President before 2045?",
     }
-    card_fields = market_to_card_fields(market_without_sub, SAMPLE_CANDLES)
+    card_fields = market_to_card_fields(market_without_sub, SAMPLE_CANDLES, probability_move=0.05)
     assert card_fields["headline"] == "Will  become President before 2045?"
 
 
-def test_market_to_card_fields_probability_move_direction():
-    card_fields = market_to_card_fields(SAMPLE_MARKET, SAMPLE_CANDLES)
-    first_prob = (
-        float(SAMPLE_CANDLES[0]["yes_bid"]["close_dollars"])
-        + float(SAMPLE_CANDLES[0]["yes_ask"]["close_dollars"])
-    ) / 2
-    last_prob = (
-        float(SAMPLE_CANDLES[-1]["yes_bid"]["close_dollars"])
-        + float(SAMPLE_CANDLES[-1]["yes_ask"]["close_dollars"])
-    ) / 2
-    expected_move = round(last_prob - first_prob, 4)
-    assert abs(card_fields["probability_move"] - expected_move) < 0.001
+def test_market_to_card_fields_passes_through_probability_move():
+    card_fields = market_to_card_fields(SAMPLE_MARKET, SAMPLE_CANDLES, probability_move=-0.12)
+    assert card_fields["probability_move"] == -0.12
 
 
 def test_max_single_day_move_returns_largest_swing():
@@ -222,3 +214,53 @@ def test_max_single_day_move_uses_absolute_value():
     ]
     result = max_single_day_move(falling_candles)
     assert abs(result - 0.20) < 0.001
+
+
+# most_recent_qualifying_move
+# SAMPLE_CANDLES day moves: day1→day2 = +0.05, day2→day3 = +0.06
+
+
+def test_most_recent_qualifying_move_returns_most_recent():
+    # Both days qualify at min_move=0.04; most recent (day2→day3, +0.06) should win
+    move, dt = most_recent_qualifying_move(SAMPLE_CANDLES, min_move=0.04)
+    assert abs(move - 0.06) < 0.001
+    assert dt is not None
+    assert dt.timestamp() == SAMPLE_CANDLES[2]["end_period_ts"]
+
+
+def test_most_recent_qualifying_move_skips_non_qualifying():
+    # Only day2→day3 (+0.06) qualifies at min_move=0.055
+    move, dt = most_recent_qualifying_move(SAMPLE_CANDLES, min_move=0.055)
+    assert abs(move - 0.06) < 0.001
+    assert dt is not None
+
+
+def test_most_recent_qualifying_move_none_qualify():
+    move, dt = most_recent_qualifying_move(SAMPLE_CANDLES, min_move=0.99)
+    assert move == 0.0
+    assert dt is None
+
+
+def test_most_recent_qualifying_move_single_candle_returns_none():
+    move, dt = most_recent_qualifying_move([SAMPLE_CANDLES[0]], min_move=0.01)
+    assert move == 0.0
+    assert dt is None
+
+
+def test_most_recent_qualifying_move_preserves_sign():
+    falling_candles = [
+        {
+            "end_period_ts": 1700000000,
+            "yes_bid": {"close_dollars": "0.80"},
+            "yes_ask": {"close_dollars": "0.82"},
+            "volume_fp": "50000.00",
+        },
+        {
+            "end_period_ts": 1700086400,
+            "yes_bid": {"close_dollars": "0.60"},
+            "yes_ask": {"close_dollars": "0.62"},
+            "volume_fp": "50000.00",
+        },
+    ]
+    move, dt = most_recent_qualifying_move(falling_candles, min_move=0.10)
+    assert move < 0  # downward move is negative
