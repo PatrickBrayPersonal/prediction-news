@@ -9,6 +9,7 @@ from prediction_news.kalshi import (
     list_markets_by_category,
     market_to_card_fields,
     max_single_day_move,
+    max_single_day_move_at,
 )
 from prediction_news.keywords import extract_keywords
 from prediction_news.models import StoryCard
@@ -63,12 +64,14 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
 
     yes_sub_title = market.get("yes_sub_title", "")
     keywords = extract_keywords(card_fields["market_name"], yes_sub_title)
+    change_at = max_single_day_move_at(candles)
     logger.info(
         f"_build_card ticker={ticker} prob_move={card_fields['probability_move']:.4f}"
         f" open_interest={card_fields['open_interest']:.2f} keywords={keywords}"
+        f" change_at={change_at}"
     )
 
-    articles = fetch_articles(keywords, domain)
+    articles = fetch_articles(keywords, domain, change_at=change_at)
     logger.info(f"_build_card ticker={ticker} fetched {len(articles)} raw articles")
 
     filtered = await prefilter_articles(card_fields["market_name"], articles)

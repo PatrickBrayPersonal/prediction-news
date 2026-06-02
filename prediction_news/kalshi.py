@@ -278,6 +278,15 @@ def max_single_day_move(candles: list[dict]) -> float:
     return max(abs(prices[i] - prices[i - 1]) for i in range(1, len(prices)))
 
 
+def max_single_day_move_at(candles: list[dict]) -> datetime | None:
+    if len(candles) < 2:
+        return None
+    sorted_candles = sorted(candles, key=lambda c: c["end_period_ts"])
+    prices = [_candle_mid_price(c) for c in sorted_candles]
+    max_idx = max(range(1, len(prices)), key=lambda i: abs(prices[i] - prices[i - 1]))
+    return datetime.fromtimestamp(sorted_candles[max_idx]["end_period_ts"], tz=timezone.utc)
+
+
 def market_to_card_fields(market: dict, candles: list[dict]) -> dict:
     sparkline = candlesticks_to_sparkline(candles)
     current_prob = round(

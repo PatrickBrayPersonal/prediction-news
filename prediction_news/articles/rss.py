@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import feedparser
 
@@ -12,6 +12,12 @@ RSS_FEEDS: dict[str, list[str]] = {
         "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
         "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
         "https://feeds.washingtonpost.com/rss/politics",
+        "https://feeds.bloomberg.com/markets/news.rss",
+        "https://feeds.bloomberg.com/technology/news.rss",
+        "https://feeds.marketwatch.com/marketwatch/topstories/",
+        "https://feeds.marketwatch.com/marketwatch/realtimeheadlines/",
+        "https://www.ft.com/rss/home",
+        "https://www.ft.com/markets?format=rss",
     ],
     "world": [
         "https://feeds.reuters.com/reuters/worldNews",
@@ -25,13 +31,14 @@ RSS_FEEDS: dict[str, list[str]] = {
 }
 
 
-def _is_recent(entry: dict, since_hours: int) -> bool:
+def _is_within_window(entry: dict, change_at: datetime) -> bool:
     published = entry.get("published_parsed")
     if published is None:
         return True
     pub_dt = datetime(*published[:6], tzinfo=timezone.utc)
-    age_hours = (datetime.now(timezone.utc) - pub_dt).total_seconds() / 3600
-    return age_hours <= since_hours
+    window_start = change_at - timedelta(hours=settings.article_window_before_hours)
+    window_end = change_at + timedelta(hours=settings.article_window_after_hours)
+    return window_start <= pub_dt <= window_end
 
 
 def _matches_keywords(entry: dict, keywords: list[str]) -> bool:
@@ -40,11 +47,8 @@ def _matches_keywords(entry: dict, keywords: list[str]) -> bool:
 
 
 def fetch_articles(
-    keywords: list[str], domain: str, since_hours: int | None = None
+    keywords: list[str], domain: str, change_at: datetime | None = None
 ) -> list[Source]:
-    since_hours = (
-        since_hours if since_hours is not None else settings.rss_lookback_hours
-    )
     feed_urls = RSS_FEEDS.get(domain, [])
     seen_urls: set[str] = set()
     results: list[Source] = []
@@ -55,7 +59,7 @@ def fetch_articles(
             url = entry.get("link", "")
             if url in seen_urls:
                 continue
-            if not _is_recent(entry, since_hours):
+            if change_at is not None and not _is_within_window(entry, change_at):
                 continue
             if not _matches_keywords(entry, keywords):
                 continue
