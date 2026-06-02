@@ -42,6 +42,8 @@ SAMPLE_SOURCE = Source(
     title="Election article", url="https://reuters.com/1", type="rss"
 )
 SAMPLE_SUMMARY = "Democrats gained ground after a strong debate performance."
+
+
 async def test_build_feed_returns_story_cards():
     with (
         patch(

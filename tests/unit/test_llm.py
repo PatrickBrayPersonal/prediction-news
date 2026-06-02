@@ -75,5 +75,3 @@ async def test_score_and_summarize_returns_summary_and_sources():
     assert summary == "Market moved on polling data."
     assert len(sources) == 1
     assert sources[0].url == "https://reuters.com/1"
-
-
