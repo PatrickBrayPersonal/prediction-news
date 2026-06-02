@@ -9,6 +9,8 @@ RSS_FEEDS: dict[str, list[str]] = {
     "politics": [
         "https://feeds.reuters.com/reuters/politicsNews",
         "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
         "https://feeds.washingtonpost.com/rss/politics",
     ],
     "world": [
