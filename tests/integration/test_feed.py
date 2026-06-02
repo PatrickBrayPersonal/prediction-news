@@ -20,18 +20,21 @@ SAMPLE_CANDLES = [
         "yes_bid": {"close_dollars": "0.40"},
         "yes_ask": {"close_dollars": "0.42"},
         "volume_fp": "100000.00",
+        "open_interest_fp": "50000.00",
     },
     {
         "end_period_ts": 1700086400,
         "yes_bid": {"close_dollars": "0.44"},
         "yes_ask": {"close_dollars": "0.48"},
         "volume_fp": "120000.00",
+        "open_interest_fp": "55000.00",
     },
     {
         "end_period_ts": 1700172800,
         "yes_bid": {"close_dollars": "0.50"},
         "yes_ask": {"close_dollars": "0.54"},
         "volume_fp": "90000.00",
+        "open_interest_fp": "60000.00",
     },
 ]
 
@@ -86,12 +89,14 @@ async def test_build_feed_cards_are_ranked():
             "yes_bid": {"close_dollars": "0.10"},
             "yes_ask": {"close_dollars": "0.12"},
             "volume_fp": "60000.00",
+            "open_interest_fp": "50000.00",
         },
         {
             "end_period_ts": 1700172800,
             "yes_bid": {"close_dollars": "0.90"},
             "yes_ask": {"close_dollars": "0.92"},
             "volume_fp": "60000.00",
+            "open_interest_fp": "60000.00",
         },
     ]
     # low: 5pp single-day move, $120k volume → passes filters but ranks below high
@@ -101,12 +106,14 @@ async def test_build_feed_cards_are_ranked():
             "yes_bid": {"close_dollars": "0.48"},
             "yes_ask": {"close_dollars": "0.50"},
             "volume_fp": "60000.00",
+            "open_interest_fp": "50000.00",
         },
         {
             "end_period_ts": 1700172800,
             "yes_bid": {"close_dollars": "0.54"},
             "yes_ask": {"close_dollars": "0.56"},
             "volume_fp": "60000.00",
+            "open_interest_fp": "60000.00",
         },
     ]
     market_high = {**SAMPLE_MARKET, "ticker": "KXELECTION-HIGH"}

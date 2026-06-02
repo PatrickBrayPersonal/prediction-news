@@ -14,6 +14,7 @@ SAMPLE_CARD = StoryCard(
     current_probability=0.55,
     probability_move=0.10,
     volume_usd=1_000_000.0,
+    open_interest=2_000_000.0,
     sparkline=[SparklinePoint(date="2024-01-01", probability=0.55)],
     summary="Test summary",
     calibration_note="Test note",

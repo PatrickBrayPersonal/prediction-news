@@ -19,6 +19,32 @@
             "program": "scripts/update_feed.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "elon ticker",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/update_feed.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["--ticker", "KXELONMARS-99"]
+        },
+        {
+            "name": "anthropic ipo ticker",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/update_feed.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["--ticker", "KXOAIANTH-40-OAI"]
+        },
+        {
+            "name": "pope build",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/build_erdo_pope.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

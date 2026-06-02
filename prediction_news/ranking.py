@@ -1,7 +1,7 @@
 from prediction_news.models import StoryCard
 
 MIN_PROBABILITY_MOVE = 0.05
-MIN_VOLUME_USD = 100_000.0
+MIN_OPEN_INTEREST = 10_000.0
 
 
 def score_card(card: StoryCard) -> float:
@@ -11,12 +11,12 @@ def score_card(card: StoryCard) -> float:
 def filter_cards(
     cards: list[StoryCard],
     min_move: float = MIN_PROBABILITY_MOVE,
-    min_volume: float = MIN_VOLUME_USD,
+    min_open_interest: float = MIN_OPEN_INTEREST,
 ) -> list[StoryCard]:
     return [
         c
         for c in cards
-        if abs(c.probability_move) >= min_move and c.volume_usd >= min_volume
+        if abs(c.probability_move) >= min_move and c.open_interest >= min_open_interest
     ]
 
 

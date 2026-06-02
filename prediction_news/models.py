@@ -30,6 +30,7 @@ class StoryCard(BaseModel):
     current_probability: float
     probability_move: float
     volume_usd: float
+    open_interest: float
     sparkline: list[SparklinePoint]
     summary: str
     calibration_note: str

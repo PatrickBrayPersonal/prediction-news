@@ -19,6 +19,7 @@ pydantic-settings = "^2.0"
 cachetools = "^7.1.4"
 tenacity = "^9.1.4"
 loguru = "^0.7"
+pip-system-certs = "^5.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"

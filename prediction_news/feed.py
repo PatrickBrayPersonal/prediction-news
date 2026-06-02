@@ -54,11 +54,11 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
         )
         return None
 
-    volume = card_fields["volume_usd"]
-    if volume < settings.min_volume_usd:
+    open_interest = card_fields["open_interest"]
+    if open_interest < settings.min_open_interest:
         logger.debug(
-            f"_build_card skipping ticker={ticker}: volume {volume:.2f}"
-            f" < {settings.min_volume_usd}"
+            f"_build_card skipping ticker={ticker}: open_interest {open_interest:.2f}"
+            f" < {settings.min_open_interest}"
         )
         return None
 
@@ -66,7 +66,7 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
     keywords = extract_keywords(card_fields["market_name"], yes_sub_title)
     logger.info(
         f"_build_card ticker={ticker} prob_move={card_fields['probability_move']:.4f}"
-        f" volume={card_fields['volume_usd']:.2f} keywords={keywords}"
+        f" open_interest={card_fields['open_interest']:.2f} keywords={keywords}"
     )
 
     articles = fetch_articles(keywords, domain)
@@ -132,6 +132,10 @@ async def build_feed(domain: str) -> list[StoryCard]:
     errors = [r for r in results if isinstance(r, Exception)]
     cards = [r for r in results if isinstance(r, StoryCard)]
     if errors:
+        for exc in errors:
+            logger.exception(
+                f"build_feed domain={domain}: card failed with exception", exc_info=exc
+            )
         logger.warning(
             f"build_feed domain={domain}: {len(errors)} cards failed with exceptions"
         )
@@ -142,7 +146,7 @@ async def build_feed(domain: str) -> list[StoryCard]:
     filtered = filter_cards(
         cards,
         min_move=settings.min_probability_move,
-        min_volume=settings.min_volume_usd,
+        min_open_interest=settings.min_open_interest,
     )
     ranked = rank_cards(filtered)
     logger.info(f"build_feed domain={domain}: returning {len(ranked)} ranked cards")

@@ -746,6 +746,31 @@ files = [
 ]
 
 [[package]]
+name = "pip"
+version = "26.1.2"
+description = "The PyPA recommended tool for installing Python packages."
+optional = false
+python-versions = ">=3.10"
+files = [
+    {file = "pip-26.1.2-py3-none-any.whl", hash = "sha256:382ff9f685ee3bc25864f820aa50505825f10f5458ffff07e30a6d96e5715cab"},
+    {file = "pip-26.1.2.tar.gz", hash = "sha256:f49cd134c61cf2fd75e0ce2676db03e4054504a5a4986d00f8299ae632dc4605"},
+]
+
+[[package]]
+name = "pip-system-certs"
+version = "5.3"
+description = "Automatically configures Python to use system certificates via truststore"
+optional = false
+python-versions = ">=3.10"
+files = [
+    {file = "pip_system_certs-5.3-py3-none-any.whl", hash = "sha256:3fbb5de62e374a99b688b1ad06e64ee5c4aeb633ef23e3a677d32e3e84fd863c"},
+    {file = "pip_system_certs-5.3.tar.gz", hash = "sha256:19c8bf9957bcce7d69c4dbc2d0b2ef13de1984d53f50a59012e6dbbad0af67c6"},
+]
+
+[package.dependencies]
+pip = ">=24.2"
+
+[[package]]
 name = "pluggy"
 version = "1.6.0"
 description = "plugin and hook calling mechanisms for python"
@@ -1512,4 +1537,4 @@ dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "82801b8230a9c8005411128be7537dcc5d578fbd076608688bf44cf0c23ec5f7"
+content-hash = "b5f1d3fe58c37ba0ee5fadce1def0bd051925f6bd115e941005a11dc4a14838f"

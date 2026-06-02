@@ -288,6 +288,7 @@ def market_to_card_fields(market: dict, candles: list[dict]) -> dict:
     )
     probability_move = round(current_prob - first_prob, 4)
     volume = sum(float(c.get("volume_fp") or 0) for c in candles)
+    open_interest = float(candles[-1].get("open_interest_fp") or 0) if candles else 0.0
     title = market.get("title", "")
     yes_sub_title = market.get("yes_sub_title", "").strip()
     headline = _resolve_headline(title, yes_sub_title)
@@ -299,5 +300,6 @@ def market_to_card_fields(market: dict, candles: list[dict]) -> dict:
         "current_probability": current_prob,
         "probability_move": probability_move,
         "volume_usd": volume,
+        "open_interest": open_interest,
         "sparkline": sparkline,
     }

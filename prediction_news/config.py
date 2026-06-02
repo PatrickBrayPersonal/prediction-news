@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     kalshi_events_limit: int = 100
     kalshi_lookback_days: int = 14
     min_probability_move: float = 0.02
-    min_volume_usd: float = 10_000.0
+    min_open_interest: float = 10_000.0
     rss_lookback_hours: int = 48
     feed_domains: str = "politics"
 
