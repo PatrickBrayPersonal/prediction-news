@@ -1,9 +1,10 @@
 import json
+import re
 import sys
 from enum import Enum
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
@@ -41,8 +42,11 @@ class Domain(str, Enum):
 
 
 @app.get("/api/feeds/{domain}", response_model=list[StoryCard])
-async def get_feed(domain: Domain) -> list[StoryCard]:
-    path = DATA_DIR / f"{domain.value}.json"
+async def get_feed(domain: Domain, ticker: str | None = None) -> list[StoryCard]:
+    if ticker is not None and not re.fullmatch(r"[A-Za-z0-9\-]+", ticker):
+        raise HTTPException(status_code=400, detail="Invalid ticker")
+    filename = f"{domain.value}-{ticker}.json" if ticker else f"{domain.value}.json"
+    path = DATA_DIR / filename
     if not path.exists():
         return []
     data = json.loads(path.read_text())

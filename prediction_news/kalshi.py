@@ -315,6 +315,7 @@ def market_to_card_fields(
         "platform": "Kalshi",
         "market_name": headline,
         "headline": headline,
+        "yes_sub_title": yes_sub_title,
         "current_probability": current_prob,
         "probability_move": probability_move,
         "volume_usd": volume,

@@ -94,6 +94,7 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
         domain=domain,
         summary=summary,
         sources=sources,
+        change_at=change_at.isoformat(),
     )
 
 

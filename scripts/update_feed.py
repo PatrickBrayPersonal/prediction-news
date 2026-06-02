@@ -59,7 +59,7 @@ async def _run_ticker(ticker: str, domain: str, log: logging.Logger) -> None:
         return
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     path = DATA_DIR / f"{domain}-{ticker}.json"
-    path.write_text(json.dumps(card.model_dump(), indent=2))
+    path.write_text(json.dumps([card.model_dump()], indent=2))
     elapsed = time.perf_counter() - t0
     log.info("  1 card → %s (%.1fs)", path, elapsed)
 
