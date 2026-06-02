@@ -47,10 +47,14 @@ async def rank_sources(market_name: str, articles: list[Source]) -> list[Source]
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
     article_list = "\n".join(f"- {a.title} ({a.url})" for a in articles)
     prompt = (
-        f"Rank the following news articles by relevance to this market: {market_name}\n\n"
+        f"You are filtering and ranking news articles for a prediction market.\n\n"
+        f"Market: {market_name}\n\n"
         f"Articles:\n{article_list}\n\n"
+        f"Only include articles that have a genuine causal relationship to the market outcome — "
+        f"meaning the headline plausibly explains why the market probability moved. "
+        f"Exclude articles where the connection is coincidental, tangential, or absent.\n\n"
         f"Respond in exactly this format:\n"
-        f"SOURCES: <comma-separated list of URLs in order of relevance>"
+        f"SOURCES: <comma-separated list of URLs in order of relevance, or NONE if no articles qualify>"
     )
 
     response = await client.messages.create(
@@ -65,8 +69,10 @@ async def rank_sources(market_name: str, articles: list[Source]) -> list[Source]
     url_to_source = {a.url: a for a in articles}
     for line in response.content[0].text.strip().split("\n"):
         if line.startswith("SOURCES:"):
-            urls = [u.strip() for u in line[len("SOURCES:"):].split(",")]
-            ranked = [url_to_source[u] for u in urls if u in url_to_source]
-            return ranked if ranked else articles
+            value = line[len("SOURCES:"):].strip()
+            if value.upper() == "NONE":
+                return []
+            urls = [u.strip() for u in value.split(",")]
+            return [url_to_source[u] for u in urls if u in url_to_source]
 
-    return articles
+    return []

@@ -83,6 +83,10 @@ async def _build_card(market: dict, domain: str) -> StoryCard | None:
     logger.info(
         f"_build_card ticker={ticker} rank_sources returned {len(sources)} sources"
     )
+    if not sources:
+        logger.info(f"_build_card skipping ticker={ticker}: no causally matched sources")
+        return None
+
     summary = sources[0].excerpt if sources else ""
 
     return StoryCard(
