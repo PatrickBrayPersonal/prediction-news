@@ -1,5 +1,5 @@
 from prediction_news.models import Source, SparklinePoint, StoryCard
-from prediction_news.ranking import rank_cards, score_card
+from prediction_news.ranking import filter_cards, rank_cards, score_card
 
 
 def _make_card(
@@ -49,3 +49,33 @@ def test_rank_cards_empty_list():
 def test_rank_cards_single_card():
     card = _make_card(0.10, 500_000)
     assert rank_cards([card]) == [card]
+
+
+def test_filter_cards_excludes_low_move():
+    low = _make_card(probability_move=0.03, volume_usd=200_000, card_id="low")
+    high = _make_card(probability_move=0.10, volume_usd=200_000, card_id="high")
+    result = filter_cards([low, high], min_move=0.05, min_volume=100_000)
+    assert [c.id for c in result] == ["high"]
+
+
+def test_filter_cards_excludes_low_volume():
+    low_vol = _make_card(probability_move=0.10, volume_usd=50_000, card_id="low_vol")
+    ok = _make_card(probability_move=0.10, volume_usd=100_000, card_id="ok")
+    result = filter_cards([low_vol, ok], min_move=0.05, min_volume=100_000)
+    assert [c.id for c in result] == ["ok"]
+
+
+def test_filter_cards_passes_qualifying_cards():
+    card = _make_card(probability_move=0.05, volume_usd=100_000, card_id="borderline")
+    result = filter_cards([card], min_move=0.05, min_volume=100_000)
+    assert len(result) == 1
+
+
+def test_filter_cards_uses_absolute_value_of_move():
+    neg = _make_card(probability_move=-0.08, volume_usd=150_000, card_id="neg")
+    result = filter_cards([neg], min_move=0.05, min_volume=100_000)
+    assert len(result) == 1
+
+
+def test_filter_cards_empty_list():
+    assert filter_cards([], min_move=0.05, min_volume=100_000) == []

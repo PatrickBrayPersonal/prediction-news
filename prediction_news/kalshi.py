@@ -102,7 +102,11 @@ async def _fetch_events(category: str) -> list[dict]:
         async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
             response = await client.get(
                 "/events",
-                params={"status": "open", "category": category, "limit": str(settings.kalshi_events_limit)},
+                params={
+                    "status": "open",
+                    "category": category,
+                    "limit": str(settings.kalshi_events_limit),
+                },
                 headers=_auth_headers("GET", path),
             )
             response.raise_for_status()
@@ -130,7 +134,9 @@ async def list_markets_by_category(category: str) -> list[dict]:
 
     logger.info(f"list_markets_by_category fetching events for category={category}")
     events = await _fetch_events(category)
-    logger.info(f"list_markets_by_category got {len(events)} events for category={category}")
+    logger.info(
+        f"list_markets_by_category got {len(events)} events for category={category}"
+    )
 
     market_batches = await asyncio.gather(
         *[_fetch_markets_by_event(e["event_ticker"]) for e in events],
@@ -206,7 +212,9 @@ async def get_candlesticks(
         logger.debug(f"get_candlesticks cache hit for ticker={ticker} days={days}")
         return _CANDLESTICK_CACHE[cache_key]
     if cache_key in _CANDLESTICK_FAILURE_CACHE:
-        logger.debug(f"get_candlesticks failure cache hit for ticker={ticker}, skipping")
+        logger.debug(
+            f"get_candlesticks failure cache hit for ticker={ticker}, skipping"
+        )
         raise _CANDLESTICK_FAILURE_CACHE[cache_key]
     end_ts = int(time.time())
     start_ts = end_ts - days * 86400
@@ -215,7 +223,9 @@ async def get_candlesticks(
         "end_ts": str(end_ts),
         "period_interval": "1440",
     }
-    logger.debug(f"get_candlesticks fetching ticker={ticker} series={series_ticker} days={days}")
+    logger.debug(
+        f"get_candlesticks fetching ticker={ticker} series={series_ticker} days={days}"
+    )
     try:
         result = await _fetch_candlesticks(ticker, series_ticker, params)
     except Exception as exc:
@@ -258,6 +268,14 @@ def _resolve_headline(title: str, yes_sub_title: str) -> str:
     if yes_sub_title and "  " in title:
         return title.replace("  ", f" {yes_sub_title} ", 1)
     return title
+
+
+def max_single_day_move(candles: list[dict]) -> float:
+    if len(candles) < 2:
+        return 0.0
+    sorted_candles = sorted(candles, key=lambda c: c["end_period_ts"])
+    prices = [_candle_mid_price(c) for c in sorted_candles]
+    return max(abs(prices[i] - prices[i - 1]) for i in range(1, len(prices)))
 
 
 def market_to_card_fields(market: dict, candles: list[dict]) -> dict:

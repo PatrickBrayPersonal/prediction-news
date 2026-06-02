@@ -9,6 +9,7 @@ from prediction_news.kalshi import (
     get_candlesticks,
     list_markets,
     market_to_card_fields,
+    max_single_day_move,
 )
 
 SAMPLE_MARKET = {
@@ -156,12 +157,18 @@ def test_market_to_card_fields_uses_yes_sub_title():
         "yes_sub_title": "Gavin Newsom",
     }
     card_fields = market_to_card_fields(market_with_sub, SAMPLE_CANDLES)
-    assert card_fields["headline"] == "Will Gavin Newsom become President of the United States before 2045?"
+    assert (
+        card_fields["headline"]
+        == "Will Gavin Newsom become President of the United States before 2045?"
+    )
     assert card_fields["market_name"] == card_fields["headline"]
 
 
 def test_market_to_card_fields_no_sub_title_uses_raw_title():
-    market_without_sub = {**SAMPLE_MARKET, "title": "Will  become President before 2045?"}
+    market_without_sub = {
+        **SAMPLE_MARKET,
+        "title": "Will  become President before 2045?",
+    }
     card_fields = market_to_card_fields(market_without_sub, SAMPLE_CANDLES)
     assert card_fields["headline"] == "Will  become President before 2045?"
 
@@ -178,3 +185,40 @@ def test_market_to_card_fields_probability_move_direction():
     ) / 2
     expected_move = round(last_prob - first_prob, 4)
     assert abs(card_fields["probability_move"] - expected_move) < 0.001
+
+
+def test_max_single_day_move_returns_largest_swing():
+    # Day 0 mid: (0.40+0.42)/2 = 0.41
+    # Day 1 mid: (0.44+0.48)/2 = 0.46  → delta = 0.05
+    # Day 2 mid: (0.50+0.54)/2 = 0.52  → delta = 0.06
+    result = max_single_day_move(SAMPLE_CANDLES)
+    assert abs(result - 0.06) < 0.001
+
+
+def test_max_single_day_move_single_candle_returns_zero():
+    result = max_single_day_move([SAMPLE_CANDLES[0]])
+    assert result == 0.0
+
+
+def test_max_single_day_move_empty_returns_zero():
+    result = max_single_day_move([])
+    assert result == 0.0
+
+
+def test_max_single_day_move_uses_absolute_value():
+    falling_candles = [
+        {
+            "end_period_ts": 1700000000,
+            "yes_bid": {"close_dollars": "0.80"},
+            "yes_ask": {"close_dollars": "0.82"},
+            "volume_fp": "50000.00",
+        },
+        {
+            "end_period_ts": 1700086400,
+            "yes_bid": {"close_dollars": "0.60"},
+            "yes_ask": {"close_dollars": "0.62"},
+            "volume_fp": "50000.00",
+        },
+    ]
+    result = max_single_day_move(falling_candles)
+    assert abs(result - 0.20) < 0.001

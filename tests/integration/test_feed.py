@@ -79,32 +79,34 @@ async def test_build_feed_returns_story_cards():
 
 
 async def test_build_feed_cards_are_ranked():
+    # high: 80pp single-day move, $120k volume → score ≈ 96k
     high_candles = [
         {
             "end_period_ts": 1700000000,
             "yes_bid": {"close_dollars": "0.10"},
             "yes_ask": {"close_dollars": "0.12"},
-            "volume_fp": "10000.00",
+            "volume_fp": "60000.00",
         },
         {
             "end_period_ts": 1700172800,
             "yes_bid": {"close_dollars": "0.90"},
             "yes_ask": {"close_dollars": "0.92"},
-            "volume_fp": "50000.00",
+            "volume_fp": "60000.00",
         },
     ]
+    # low: 5pp single-day move, $120k volume → passes filters but ranks below high
     low_candles = [
         {
             "end_period_ts": 1700000000,
             "yes_bid": {"close_dollars": "0.48"},
             "yes_ask": {"close_dollars": "0.50"},
-            "volume_fp": "10000.00",
+            "volume_fp": "60000.00",
         },
         {
             "end_period_ts": 1700172800,
-            "yes_bid": {"close_dollars": "0.50"},
-            "yes_ask": {"close_dollars": "0.52"},
-            "volume_fp": "10000.00",
+            "yes_bid": {"close_dollars": "0.54"},
+            "yes_ask": {"close_dollars": "0.56"},
+            "volume_fp": "60000.00",
         },
     ]
     market_high = {**SAMPLE_MARKET, "ticker": "KXELECTION-HIGH"}

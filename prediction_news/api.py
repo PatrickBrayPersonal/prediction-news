@@ -13,7 +13,9 @@ from prediction_news.models import StoryCard
 DATA_DIR = Path(__file__).parent.parent / "data" / "feeds"
 
 logger.remove()
-logger.add(sys.stderr, format="{time:HH:mm:ss} {level:<8} {name}  {message}", level="INFO")
+logger.add(
+    sys.stderr, format="{time:HH:mm:ss} {level:<8} {name}  {message}", level="INFO"
+)
 
 app = FastAPI(title="PredictionNews")
 

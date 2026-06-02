@@ -2,7 +2,9 @@ from prediction_news.keywords import extract_keywords
 
 
 def test_strips_stop_words():
-    result = extract_keywords("Will Gavin Newsom become President of the United States before 2045?")
+    result = extract_keywords(
+        "Will Gavin Newsom become President of the United States before 2045?"
+    )
     assert "will" not in result
     assert "the" not in result
     assert "of" not in result
@@ -10,7 +12,9 @@ def test_strips_stop_words():
 
 
 def test_keeps_meaningful_words():
-    result = extract_keywords("Will Gavin Newsom become President of the United States before 2045?")
+    result = extract_keywords(
+        "Will Gavin Newsom become President of the United States before 2045?"
+    )
     assert "gavin" in result
     assert "newsom" in result
     assert "president" in result
