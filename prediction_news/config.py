@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     kalshi_lookback_days: int = 14
     min_probability_move: float = 0.02
     min_open_interest: float = 10_000.0
-    rss_lookback_hours: int = 48
+    rss_lookback_hours: int = 14 * 24
     feed_domains: str = "politics"
 
     model_config = {"env_file": str(_PROJECT_ROOT / ".env"), "extra": "ignore"}
