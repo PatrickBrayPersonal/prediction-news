@@ -162,14 +162,6 @@ async def _build_card(
     volume_usd_val = card_fields["volume_usd"]
     change_at_str = change_at.isoformat()
 
-    open_interest = card_fields["open_interest"]
-    if open_interest < settings.min_open_interest:
-        logger.debug(
-            f"_build_card skipping ticker={ticker}: open_interest {open_interest:.2f}"
-            f" < {settings.min_open_interest}"
-        )
-        return None, _entry(False, "below_min_open_interest")
-
     keywords = extract_keywords(card_fields["market_name"], yes_sub_title)
     logger.info(
         f"_build_card ticker={ticker} prob_move={card_fields['probability_move']:.4f}"
@@ -229,19 +221,53 @@ async def build_feed(domain: str) -> tuple[list[StoryCard], list[MarketLogEntry]
         all_markets_raw = await get_all_markets()
         seen: set[str] = set()
         all_markets = []
+        skipped_low_oi: list[dict] = []
         for m in all_markets_raw:
             ticker = m.get("ticker", "")
-            if (m.get("category") or "").casefold() in domain_cats and ticker not in seen:
-                seen.add(ticker)
-                all_markets.append(m)
+            if (m.get("category") or "").casefold() not in domain_cats:
+                continue
+            if ticker in seen:
+                continue
+            seen.add(ticker)
+            oi = float(m.get("open_interest") or 0)
+            if oi < settings.min_open_interest:
+                skipped_low_oi.append(m)
+                continue
+            all_markets.append(m)
     except Exception as exc:
         logger.exception(
             f"Failed to fetch markets from Kalshi for domain={domain}: {exc}"
         )
         return [], []
 
+    for m in skipped_low_oi:
+        log_entries.append(
+            MarketLogEntry(
+                run_timestamp=run_timestamp,
+                domain=domain,
+                ticker=m.get("ticker", ""),
+                event_ticker=m.get("event_ticker", ""),
+                market_name=m.get("yes_sub_title", "") or m.get("ticker", ""),
+                yes_sub_title=m.get("yes_sub_title", ""),
+                probability_move=None,
+                current_probability=None,
+                open_interest=float(m.get("open_interest") or 0),
+                volume_usd=None,
+                change_at=None,
+                articles_fetched=None,
+                articles_fetched_urls=None,
+                articles_prefiltered=None,
+                articles_prefiltered_urls=None,
+                sources_matched=None,
+                sources_matched_urls=None,
+                card_built=False,
+                skip_reason="below_min_open_interest",
+            )
+        )
+
     logger.info(
-        f"build_feed domain={domain}: {len(all_markets)} total unique markets before dedup"
+        f"build_feed domain={domain}: {len(all_markets)} markets after open_interest"
+        f" filter (skipped {len(skipped_low_oi)})"
     )
     pre_dedup = all_markets[:]
     all_markets = await _select_top_market_per_event(all_markets)

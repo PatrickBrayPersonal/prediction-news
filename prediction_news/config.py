@@ -12,6 +12,8 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
     kalshi_lookback_days: int = 14
+    kalshi_max_days_to_close: int = 180
+    kalshi_concurrency: int = 10
     min_probability_move: float = 0.02
     min_open_interest: float = 10_000.0
     article_window_before_hours: int = 24

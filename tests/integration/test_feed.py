@@ -12,6 +12,9 @@ SAMPLE_MARKET = {
     "volume_fp": "5000000.00",
     "status": "open",
     "series_ticker": "KXELECTION",
+    "event_ticker": "KXELECTION-24",
+    "category": "Politics",
+    "open_interest": 50_000,
 }
 
 SAMPLE_CANDLES = [
@@ -50,7 +53,7 @@ SAMPLE_SOURCE = Source(
 async def test_build_feed_returns_story_cards():
     with (
         patch(
-            "prediction_news.feed.list_markets_by_category",
+            "prediction_news.feed.get_all_markets",
             new=AsyncMock(return_value=[SAMPLE_MARKET]),
         ),
         patch(
@@ -113,8 +116,16 @@ async def test_build_feed_cards_are_ranked():
             "open_interest_fp": "60000.00",
         },
     ]
-    market_high = {**SAMPLE_MARKET, "ticker": "KXELECTION-HIGH"}
-    market_low = {**SAMPLE_MARKET, "ticker": "KXELECTION-LOW"}
+    market_high = {
+        **SAMPLE_MARKET,
+        "ticker": "KXELECTION-HIGH",
+        "event_ticker": "EVT-HIGH",
+    }
+    market_low = {
+        **SAMPLE_MARKET,
+        "ticker": "KXELECTION-LOW",
+        "event_ticker": "EVT-LOW",
+    }
 
     candles_by_ticker = {"KXELECTION-HIGH": high_candles, "KXELECTION-LOW": low_candles}
 
@@ -123,7 +134,7 @@ async def test_build_feed_cards_are_ranked():
 
     with (
         patch(
-            "prediction_news.feed.list_markets_by_category",
+            "prediction_news.feed.get_all_markets",
             new=AsyncMock(return_value=[market_high, market_low]),
         ),
         patch("prediction_news.feed.get_candlesticks", side_effect=mock_candlesticks),
@@ -146,7 +157,7 @@ async def test_build_feed_cards_are_ranked():
 
 async def test_build_feed_handles_kalshi_failure():
     with patch(
-        "prediction_news.feed.list_markets_by_category",
+        "prediction_news.feed.get_all_markets",
         new=AsyncMock(side_effect=Exception("API down")),
     ):
         result, _ = await build_feed("news")
@@ -197,7 +208,7 @@ async def test_build_feed_deduplicates_markets_by_event():
 
     with (
         patch(
-            "prediction_news.feed.list_markets_by_category",
+            "prediction_news.feed.get_all_markets",
             new=AsyncMock(return_value=[market_high, market_low]),
         ),
         patch("prediction_news.feed.get_candlesticks", side_effect=mock_candlesticks),
@@ -219,7 +230,7 @@ async def test_build_feed_deduplicates_markets_by_event():
 
 async def test_build_feed_unknown_domain_returns_empty():
     with patch(
-        "prediction_news.feed.list_markets_by_category", new=AsyncMock(return_value=[])
+        "prediction_news.feed.get_all_markets", new=AsyncMock(return_value=[])
     ) as mock_list:
         result, _ = await build_feed("unknown_domain")
     mock_list.assert_not_called()

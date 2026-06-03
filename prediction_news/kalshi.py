@@ -15,10 +15,11 @@ from prediction_news.config import settings
 from prediction_news.models import SparklinePoint
 
 KALSHI_BASE = "https://external-api.kalshi.com/trade-api/v2"
+KALSHI_TIMEOUT = httpx.Timeout(15.0, connect=10.0)
 
 _REPO_ROOT = Path(__file__).parent.parent
 
-_SEMAPHORE = asyncio.Semaphore(3)
+_SEMAPHORE = asyncio.Semaphore(settings.kalshi_concurrency)
 _MARKET_LIST_CACHE: TTLCache = TTLCache(maxsize=64, ttl=300)
 _ALL_EVENTS_CACHE: TTLCache = TTLCache(maxsize=1, ttl=300)
 _ALL_MARKETS_CACHE: TTLCache = TTLCache(maxsize=1, ttl=300)
@@ -72,7 +73,9 @@ def _auth_headers(method: str, path: str) -> dict[str, str]:
 async def _fetch_markets(params: dict[str, str]) -> list[dict]:
     path = "/trade-api/v2/markets"
     async with _SEMAPHORE:
-        async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
+        async with httpx.AsyncClient(
+            base_url=KALSHI_BASE, timeout=KALSHI_TIMEOUT
+        ) as client:
             response = await client.get(
                 "/markets",
                 params=params,
@@ -104,7 +107,9 @@ async def _fetch_events_page(cursor: str | None) -> tuple[list[dict], str | None
     if cursor:
         params["cursor"] = cursor
     async with _SEMAPHORE:
-        async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
+        async with httpx.AsyncClient(
+            base_url=KALSHI_BASE, timeout=KALSHI_TIMEOUT
+        ) as client:
             response = await client.get(
                 "/events",
                 params=params,
@@ -118,13 +123,17 @@ async def _fetch_events_page(cursor: str | None) -> tuple[list[dict], str | None
 async def _fetch_all_events() -> list[dict]:
     result: list[dict] = []
     cursor: str | None = None
+    page = 0
     while True:
+        page += 1
         events, cursor = await _fetch_events_page(cursor)
         result.extend(events)
-        logger.debug(f"_fetch_all_events page fetched {len(events)}, cursor={bool(cursor)}")
+        logger.info(
+            f"_fetch_all_events page {page}: +{len(events)} events"
+            f" (total {len(result)}, more={bool(cursor)})"
+        )
         if not cursor or not events:
             break
-    logger.info(f"_fetch_all_events total {len(result)} events")
     return result
 
 
@@ -140,17 +149,47 @@ async def _get_all_events() -> list[dict]:
 
 
 @_KALSHI_RETRY
-async def _fetch_markets_by_event(event_ticker: str) -> list[dict]:
+async def _fetch_markets_page(cursor: str | None) -> tuple[list[dict], str | None]:
     path = "/trade-api/v2/markets"
+    now_ts = int(time.time())
+    max_close_ts = now_ts + settings.kalshi_max_days_to_close * 86400
+    params: dict[str, str] = {
+        "status": "open",
+        "limit": "200",
+        "min_close_ts": str(now_ts),
+        "max_close_ts": str(max_close_ts),
+    }
+    if cursor:
+        params["cursor"] = cursor
     async with _SEMAPHORE:
-        async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
+        async with httpx.AsyncClient(
+            base_url=KALSHI_BASE, timeout=KALSHI_TIMEOUT
+        ) as client:
             response = await client.get(
                 "/markets",
-                params={"event_ticker": event_ticker, "status": "open", "limit": "20"},
+                params=params,
                 headers=_auth_headers("GET", path),
             )
             response.raise_for_status()
-            return response.json().get("markets", [])
+            data = response.json()
+            return data.get("markets", []), data.get("cursor") or None
+
+
+async def _fetch_all_open_markets() -> list[dict]:
+    result: list[dict] = []
+    cursor: str | None = None
+    page = 0
+    while True:
+        page += 1
+        markets, cursor = await _fetch_markets_page(cursor)
+        result.extend(markets)
+        logger.info(
+            f"_fetch_all_open_markets page {page}: +{len(markets)} markets"
+            f" (total {len(result)}, more={bool(cursor)})"
+        )
+        if not cursor or not markets:
+            break
+    return result
 
 
 async def get_all_markets() -> list[dict]:
@@ -158,48 +197,47 @@ async def get_all_markets() -> list[dict]:
         logger.debug("get_all_markets cache hit")
         return _ALL_MARKETS_CACHE["__all__"]
 
-    all_events = await _get_all_events()
-    logger.info(f"get_all_markets fetching markets for {len(all_events)} events")
-
-    market_batches = await asyncio.gather(
-        *[_fetch_markets_by_event(e["event_ticker"]) for e in all_events],
-        return_exceptions=True,
+    all_events, all_markets = await asyncio.gather(
+        _get_all_events(),
+        _fetch_all_open_markets(),
     )
+    logger.info(
+        f"get_all_markets joining {len(all_markets)} markets to {len(all_events)} events"
+    )
+
+    event_meta: dict[str, tuple[str, str]] = {
+        e.get("event_ticker", ""): (
+            e.get("category", ""),
+            e.get("series_ticker", ""),
+        )
+        for e in all_events
+        if e.get("event_ticker")
+    }
 
     seen: set[str] = set()
     result: list[dict] = []
-    failed = 0
-    for event, batch in zip(all_events, market_batches):
-        if isinstance(batch, Exception):
-            logger.warning(
-                f"get_all_markets failed to fetch markets"
-                f" for event={event.get('event_ticker', '?')}: {batch}"
-            )
-            failed += 1
+    orphaned = 0
+    for m in all_markets:
+        ticker = m.get("ticker", "")
+        event_ticker = m.get("event_ticker", "")
+        if not ticker or ticker in seen:
             continue
-        category = event.get("category", "")
-        series_ticker = event.get("series_ticker", "")
-        before = len(result)
-        for m in batch:
-            ticker = m.get("ticker", "")
-            if ticker and ticker not in seen:
-                seen.add(ticker)
-                result.append(
-                    {
-                        **m,
-                        "series_ticker": series_ticker,
-                        "event_ticker": event.get("event_ticker", ""),
-                        "category": category,
-                    }
-                )
-        logger.debug(
-            f"event={event.get('event_ticker', '?')} added {len(result) - before}"
-            f" markets (batch size={len(batch)})"
+        meta = event_meta.get(event_ticker)
+        if meta is None:
+            orphaned += 1
+            continue
+        category, series_ticker = meta
+        seen.add(ticker)
+        result.append(
+            {
+                **m,
+                "series_ticker": series_ticker,
+                "event_ticker": event_ticker,
+                "category": category,
+            }
         )
 
-    logger.info(
-        f"get_all_markets: {len(result)} total markets, {failed} events failed"
-    )
+    logger.info(f"get_all_markets: {len(result)} markets joined, {orphaned} orphaned")
     _ALL_MARKETS_CACHE["__all__"] = result
     return result
 
@@ -211,7 +249,8 @@ async def list_markets_by_category(category: str) -> list[dict]:
 
     all_markets = await get_all_markets()
     result = [
-        m for m in all_markets
+        m
+        for m in all_markets
         if (m.get("category") or "").casefold() == category.casefold()
     ]
     logger.info(f"list_markets_by_category category={category}: {len(result)} markets")
@@ -223,7 +262,9 @@ async def list_markets_by_category(category: str) -> list[dict]:
 async def get_market(ticker: str) -> dict:
     path = f"/trade-api/v2/markets/{ticker}"
     async with _SEMAPHORE:
-        async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
+        async with httpx.AsyncClient(
+            base_url=KALSHI_BASE, timeout=KALSHI_TIMEOUT
+        ) as client:
             response = await client.get(
                 f"/markets/{ticker}",
                 headers=_auth_headers("GET", path),
@@ -238,7 +279,9 @@ async def _fetch_candlesticks(
 ) -> list[dict]:
     path = f"/trade-api/v2/series/{series_ticker}/markets/{ticker}/candlesticks"
     async with _SEMAPHORE:
-        async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
+        async with httpx.AsyncClient(
+            base_url=KALSHI_BASE, timeout=KALSHI_TIMEOUT
+        ) as client:
             response = await client.get(
                 f"/series/{series_ticker}/markets/{ticker}/candlesticks",
                 params=params,
