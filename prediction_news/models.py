@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, field_validator
@@ -60,3 +61,26 @@ class StoryCard(BaseModel):
         if v < 0:
             raise ValueError("volume_usd must be non-negative")
         return v
+
+
+@dataclass
+class MarketLogEntry:
+    run_timestamp: str
+    domain: str
+    ticker: str
+    event_ticker: str
+    market_name: str
+    yes_sub_title: str
+    probability_move: float | None
+    current_probability: float | None
+    open_interest: float | None
+    volume_usd: float | None
+    change_at: str | None
+    articles_fetched: int | None
+    articles_fetched_urls: str | None
+    articles_prefiltered: int | None
+    articles_prefiltered_urls: str | None
+    sources_matched: int | None
+    sources_matched_urls: str | None
+    card_built: bool
+    skip_reason: str | None

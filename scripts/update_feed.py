@@ -1,7 +1,8 @@
 import argparse
 import asyncio
+import csv
+import dataclasses
 import json
-import logging
 import re
 import sys
 import time
@@ -10,74 +11,98 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from loguru import logger
+
 from prediction_news.config import settings
 from prediction_news.feed import _build_card, build_feed
 from prediction_news.kalshi import get_market
+from prediction_news.models import MarketLogEntry
 
 LOG_DIR = Path(__file__).parent.parent / "logs"
 DATA_DIR = Path(__file__).parent.parent / "data" / "feeds"
 DOMAINS = settings.feed_domains_list
 
 
-def _setup_logging() -> logging.Logger:
-    now = datetime.now(timezone.utc)
+def _setup_logging(now: datetime) -> Path:
     day_dir = LOG_DIR / now.strftime("%Y-%m-%d")
     day_dir.mkdir(parents=True, exist_ok=True)
     log_file = day_dir / f"update_feed_{now.strftime('%H%M%SZ')}.log"
 
-    logger = logging.getLogger("update_feed")
-    logger.setLevel(logging.INFO)
-
-    fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(fmt)
-    logger.addHandler(file_handler)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(logging.Formatter("%(message)s"))
-    logger.addHandler(console_handler)
-
-    logger.info("Logging to %s", log_file)
-    return logger
+    logger.remove()
+    logger.add(
+        sys.stderr,
+        format="{time:HH:mm:ss} {level:<8} {name}  {message}",
+        level="INFO",
+    )
+    logger.add(
+        log_file,
+        format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}",
+        level="INFO",
+    )
+    logger.info(f"Logging to {log_file}")
+    return day_dir
 
 
-async def _run_ticker(ticker: str, domain: str, log: logging.Logger) -> None:
+def _write_market_log_csv(entries: list[MarketLogEntry], csv_path: Path) -> None:
+    if not entries:
+        return
+    fields = [f.name for f in dataclasses.fields(MarketLogEntry)]
+    with csv_path.open("w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fields)
+        writer.writeheader()
+        for entry in entries:
+            writer.writerow(dataclasses.asdict(entry))
+    logger.info(f"Market log written to {csv_path} ({len(entries)} rows)")
+
+
+async def _run_ticker(ticker: str, domain: str, now: datetime) -> None:
     t0 = time.perf_counter()
     market = await get_market(ticker)
     if not market:
-        log.error("Market not found: %s", ticker)
+        logger.error(f"Market not found: {ticker}")
         sys.exit(1)
     if not market.get("series_ticker"):
         event_ticker = market.get("event_ticker", "")
         match = re.match(r"^(.+)-\d+$", event_ticker)
         if match:
             market = {**market, "series_ticker": match.group(1)}
-    card = await _build_card(market, domain)
+    card, log_entry = await _build_card(market, domain, now.isoformat())
+    day_dir = LOG_DIR / now.strftime("%Y-%m-%d")
+    csv_path = day_dir / f"market_log_{now.strftime('%H%M%SZ')}.csv"
+    _write_market_log_csv([log_entry], csv_path)
     if card is None:
-        log.info("No card built for %s (filtered out or insufficient data)", ticker)
+        logger.info(f"No card built for {ticker} (filtered out or insufficient data)")
         return
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     path = DATA_DIR / f"{domain}-{ticker}.json"
     path.write_text(json.dumps([card.model_dump()], indent=2))
     elapsed = time.perf_counter() - t0
-    log.info("  1 card → %s (%.1fs)", path, elapsed)
+    logger.info(f"  1 card → {path} ({elapsed:.1f}s)")
 
 
-async def _run_all(log: logging.Logger) -> None:
+async def _run_all(now: datetime) -> None:
     t0 = time.perf_counter()
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    all_log_entries: list[MarketLogEntry] = []
+
     for domain in DOMAINS:
-        log.info("Building %s...", domain)
+        logger.info(f"Building {domain}...")
         t1 = time.perf_counter()
-        cards = await build_feed(domain)
+        cards, log_entries = await build_feed(domain)
+        all_log_entries.extend(log_entries)
         path = DATA_DIR / f"{domain}.json"
         path.write_text(json.dumps([c.model_dump() for c in cards], indent=2))
-        log.info("  %d cards → %s (%.1fs)", len(cards), path, time.perf_counter() - t1)
+        logger.info(f"  {len(cards)} cards → {path} ({time.perf_counter() - t1:.1f}s)")
+
     (DATA_DIR / "last_updated.json").write_text(
         json.dumps({"last_updated": datetime.now(timezone.utc).isoformat()})
     )
-    log.info("Done. (%.1fs total)", time.perf_counter() - t0)
+
+    day_dir = LOG_DIR / now.strftime("%Y-%m-%d")
+    csv_path = day_dir / f"market_log_{now.strftime('%H%M%SZ')}.csv"
+    _write_market_log_csv(all_log_entries, csv_path)
+
+    logger.info(f"Done. ({time.perf_counter() - t0:.1f}s total)")
 
 
 async def main() -> None:
@@ -90,12 +115,13 @@ async def main() -> None:
         help="Domain for RSS article lookup when --ticker is used (default: politics)",
     )
     args = parser.parse_args()
-    log = _setup_logging()
+    now = datetime.now(timezone.utc)
+    _setup_logging(now)
 
     if args.ticker:
-        await _run_ticker(args.ticker, args.domain, log)
+        await _run_ticker(args.ticker, args.domain, now)
     else:
-        await _run_all(log)
+        await _run_all(now)
 
 
 if __name__ == "__main__":
