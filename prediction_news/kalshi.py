@@ -20,6 +20,8 @@ _REPO_ROOT = Path(__file__).parent.parent
 
 _SEMAPHORE = asyncio.Semaphore(3)
 _MARKET_LIST_CACHE: TTLCache = TTLCache(maxsize=64, ttl=300)
+_ALL_EVENTS_CACHE: TTLCache = TTLCache(maxsize=1, ttl=300)
+_ALL_MARKETS_CACHE: TTLCache = TTLCache(maxsize=1, ttl=300)
 _EVENTS_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
 _CANDLESTICK_CACHE: TTLCache = TTLCache(maxsize=512, ttl=600)
 _CANDLESTICK_FAILURE_CACHE: TTLCache = TTLCache(maxsize=512, ttl=120)
@@ -96,7 +98,7 @@ async def list_markets(series: str | None = None) -> list[dict]:
 
 
 @_KALSHI_RETRY
-async def _fetch_events(category: str) -> list[dict]:
+async def _fetch_all_events() -> list[dict]:
     path = "/trade-api/v2/events"
     async with _SEMAPHORE:
         async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
@@ -104,13 +106,23 @@ async def _fetch_events(category: str) -> list[dict]:
                 "/events",
                 params={
                     "status": "open",
-                    "category": category,
                     "limit": str(settings.kalshi_events_limit),
                 },
                 headers=_auth_headers("GET", path),
             )
             response.raise_for_status()
             return response.json().get("events", [])
+
+
+async def _get_all_events() -> list[dict]:
+    if "__all__" in _ALL_EVENTS_CACHE:
+        logger.debug("_get_all_events cache hit")
+        return _ALL_EVENTS_CACHE["__all__"]
+    logger.info("_get_all_events fetching from API")
+    events = await _fetch_all_events()
+    logger.info(f"_get_all_events fetched {len(events)} events")
+    _ALL_EVENTS_CACHE["__all__"] = events
+    return events
 
 
 @_KALSHI_RETRY
@@ -132,10 +144,11 @@ async def list_markets_by_category(category: str) -> list[dict]:
         logger.debug(f"list_markets_by_category cache hit for category={category}")
         return _EVENTS_CACHE[category]
 
-    logger.info(f"list_markets_by_category fetching events for category={category}")
-    events = await _fetch_events(category)
+    all_events = await _get_all_events()
+    events = [e for e in all_events if (e.get("category") or "").casefold() == category.casefold()]
     logger.info(
         f"list_markets_by_category got {len(events)} events for category={category}"
+        f" (out of {len(all_events)} total)"
     )
 
     market_batches = await asyncio.gather(

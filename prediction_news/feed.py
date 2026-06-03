@@ -21,8 +21,21 @@ from prediction_news.services.llm import (
 )
 
 DOMAIN_CATEGORIES: dict[str, list[str]] = {
-    "news": ["Politics", "Elections", "World", "Economics", "Science and Technology", "Climate and Weather"],
-    "sports": ["Sports", "Entertainment"],
+    "news": [
+        "Climate and Weather",
+        "Companies",
+        "Economics",
+        "Elections",
+        "Entertainment",
+        "Financials",
+        "Health",
+        "Politics",
+        "Science and Technology",
+        "Social",
+        "Transportation",
+        "World",
+    ],
+    "sports": ["Sports"],
 }
 
 

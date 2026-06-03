@@ -80,12 +80,12 @@ async def _run_ticker(ticker: str, domain: str, now: datetime) -> None:
     logger.info(f"  1 card → {path} ({elapsed:.1f}s)")
 
 
-async def _run_all(now: datetime) -> None:
+async def _run_all(now: datetime, domains: list[str] = DOMAINS) -> None:
     t0 = time.perf_counter()
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     all_log_entries: list[MarketLogEntry] = []
 
-    for domain in DOMAINS:
+    for domain in domains:
         logger.info(f"Building {domain}...")
         t1 = time.perf_counter()
         cards, log_entries = await build_feed(domain)
@@ -117,11 +117,12 @@ async def main() -> None:
     args = parser.parse_args()
     now = datetime.now(timezone.utc)
     _setup_logging(now)
+    domains = DOMAINS if not args.domain else [args.domain]
 
     if args.ticker:
         await _run_ticker(args.ticker, args.domain, now)
     else:
-        await _run_all(now)
+        await _run_all(now, domains=domains)
 
 
 if __name__ == "__main__":
