@@ -160,7 +160,11 @@ async def list_markets_by_category(category: str) -> list[dict]:
             ticker = m.get("ticker", "")
             if ticker and ticker not in seen:
                 seen.add(ticker)
-                result.append({**m, "series_ticker": series_ticker})
+                result.append({
+                    **m,
+                    "series_ticker": series_ticker,
+                    "event_ticker": event.get("event_ticker", ""),
+                })
         logger.debug(
             f"event={event.get('event_ticker', '?')} added {len(result) - before}"
             f" markets (batch size={len(batch)})"
@@ -281,21 +285,25 @@ def max_single_day_move(candles: list[dict]) -> float:
 def most_recent_qualifying_move(
     candles: list[dict], min_move: float
 ) -> tuple[float, datetime | None]:
-    """Return the signed move and end datetime of the most recent day where |move| >= min_move.
+    """Return the signed move and end datetime of the largest |move| >= min_move.
 
-    Walks backwards through sorted candles so that when multiple days qualify,
-    the most recent one wins. Returns (0.0, None) if no day qualifies.
+    Scans all consecutive-day pairs and picks the one with the greatest absolute
+    move. Returns (0.0, None) if no day qualifies.
     """
     if len(candles) < 2:
         return (0.0, None)
     sorted_candles = sorted(candles, key=lambda c: c["end_period_ts"])
     prices = [_candle_mid_price(c) for c in sorted_candles]
-    for i in range(len(prices) - 1, 0, -1):
+    best_move = 0.0
+    best_ts: int | None = None
+    for i in range(1, len(prices)):
         move = prices[i] - prices[i - 1]
-        if abs(move) >= min_move:
-            ts = sorted_candles[i]["end_period_ts"]
-            return (round(move, 4), datetime.fromtimestamp(ts, tz=timezone.utc))
-    return (0.0, None)
+        if abs(move) >= min_move and abs(move) > abs(best_move):
+            best_move = move
+            best_ts = sorted_candles[i]["end_period_ts"]
+    if best_ts is None:
+        return (0.0, None)
+    return (round(best_move, 4), datetime.fromtimestamp(best_ts, tz=timezone.utc))
 
 
 def market_to_card_fields(
@@ -310,12 +318,20 @@ def market_to_card_fields(
     title = market.get("title", "")
     yes_sub_title = market.get("yes_sub_title", "").strip()
     headline = _resolve_headline(title, yes_sub_title)
+    ticker = market.get("ticker", "")
+    series_ticker = market.get("series_ticker", "")
+    market_url = (
+        f"https://kalshi.com/markets/{series_ticker.lower()}/{ticker.lower()}"
+        if series_ticker and ticker
+        else ""
+    )
     return {
-        "id": market.get("ticker", ""),
+        "id": ticker,
         "platform": "Kalshi",
         "market_name": headline,
         "headline": headline,
         "yes_sub_title": yes_sub_title,
+        "market_url": market_url,
         "current_probability": current_prob,
         "probability_move": probability_move,
         "volume_usd": volume,

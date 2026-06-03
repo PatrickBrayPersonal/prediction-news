@@ -220,12 +220,41 @@ def test_max_single_day_move_uses_absolute_value():
 # SAMPLE_CANDLES day moves: day1→day2 = +0.05, day2→day3 = +0.06
 
 
-def test_most_recent_qualifying_move_returns_most_recent():
-    # Both days qualify at min_move=0.04; most recent (day2→day3, +0.06) should win
+def test_most_recent_qualifying_move_returns_largest():
+    # Both days qualify at min_move=0.04; largest (day2→day3, +0.06) should win
     move, dt = most_recent_qualifying_move(SAMPLE_CANDLES, min_move=0.04)
     assert abs(move - 0.06) < 0.001
     assert dt is not None
     assert dt.timestamp() == SAMPLE_CANDLES[2]["end_period_ts"]
+
+
+def test_most_recent_qualifying_move_picks_largest_not_most_recent():
+    # day1→day2 has a bigger move (+0.20) than day2→day3 (+0.06);
+    # largest wins even though it is not the most recent
+    candles = [
+        {
+            "end_period_ts": 1700000000,
+            "yes_bid": {"close_dollars": "0.20"},
+            "yes_ask": {"close_dollars": "0.22"},
+            "volume_fp": "100000.00",
+        },
+        {
+            "end_period_ts": 1700086400,
+            "yes_bid": {"close_dollars": "0.40"},
+            "yes_ask": {"close_dollars": "0.42"},
+            "volume_fp": "120000.00",
+        },
+        {
+            "end_period_ts": 1700172800,
+            "yes_bid": {"close_dollars": "0.44"},
+            "yes_ask": {"close_dollars": "0.48"},
+            "volume_fp": "90000.00",
+        },
+    ]
+    move, dt = most_recent_qualifying_move(candles, min_move=0.04)
+    assert abs(move - 0.20) < 0.001
+    assert dt is not None
+    assert dt.timestamp() == candles[1]["end_period_ts"]
 
 
 def test_most_recent_qualifying_move_skips_non_qualifying():

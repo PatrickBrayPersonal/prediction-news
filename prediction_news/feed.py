@@ -8,6 +8,7 @@ from prediction_news.kalshi import (
     get_candlesticks,
     list_markets_by_category,
     market_to_card_fields,
+    max_single_day_move,
     most_recent_qualifying_move,
 )
 from prediction_news.keywords import extract_keywords
@@ -23,6 +24,51 @@ DOMAIN_CATEGORIES: dict[str, list[str]] = {
     "world": ["World", "Economics", "Science and Technology", "Climate and Weather"],
     "sports": ["Sports", "Entertainment"],
 }
+
+
+async def _select_top_market_per_event(markets: list[dict]) -> list[dict]:
+    groups: dict[str, list[dict]] = {}
+    for m in markets:
+        key = m.get("event_ticker") or m.get("ticker", "")
+        groups.setdefault(key, []).append(m)
+
+    result: list[dict] = []
+    for event_key, group in groups.items():
+        if len(group) == 1:
+            result.append(group[0])
+            continue
+
+        candle_results = await asyncio.gather(
+            *[
+                get_candlesticks(
+                    m.get("ticker", ""),
+                    m.get("series_ticker", ""),
+                    days=settings.kalshi_lookback_days,
+                )
+                for m in group
+            ],
+            return_exceptions=True,
+        )
+
+        best_idx = 0
+        best_move = -1.0
+        for i, candles in enumerate(candle_results):
+            if isinstance(candles, Exception) or not candles:
+                continue
+            move = max_single_day_move(candles)
+            if move > best_move:
+                best_move = move
+                best_idx = i
+
+        dropped = len(group) - 1
+        winner_ticker = group[best_idx].get("ticker", "?")
+        logger.info(
+            f"_select_top_market_per_event event={event_key}: keeping {winner_ticker},"
+            f" dropping {dropped} other market(s)"
+        )
+        result.append(group[best_idx])
+
+    return result
 
 
 async def _build_card(market: dict, domain: str) -> StoryCard | None:
@@ -124,7 +170,11 @@ async def build_feed(domain: str) -> list[StoryCard]:
         return []
 
     logger.info(
-        f"build_feed domain={domain}: {len(all_markets)} total unique markets to process"
+        f"build_feed domain={domain}: {len(all_markets)} total unique markets before dedup"
+    )
+    all_markets = await _select_top_market_per_event(all_markets)
+    logger.info(
+        f"build_feed domain={domain}: {len(all_markets)} markets after event dedup"
     )
 
     results = await asyncio.gather(

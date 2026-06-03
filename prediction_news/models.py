@@ -30,6 +30,7 @@ class StoryCard(BaseModel):
     platform: Literal["Kalshi", "Polymarket"]
     market_name: str
     yes_sub_title: str = ""
+    market_url: str = ""
     change_at: str | None = None
     current_probability: float
     probability_move: float

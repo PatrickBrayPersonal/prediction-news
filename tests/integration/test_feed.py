@@ -153,6 +153,70 @@ async def test_build_feed_handles_kalshi_failure():
     assert result == []
 
 
+async def test_build_feed_deduplicates_markets_by_event():
+    # Two markets share an event_ticker; only the higher-mover should produce a card
+    high_candles = [
+        {
+            "end_period_ts": 1700000000,
+            "yes_bid": {"close_dollars": "0.10"},
+            "yes_ask": {"close_dollars": "0.12"},
+            "volume_fp": "60000.00",
+            "open_interest_fp": "50000.00",
+        },
+        {
+            "end_period_ts": 1700172800,
+            "yes_bid": {"close_dollars": "0.75"},
+            "yes_ask": {"close_dollars": "0.77"},
+            "volume_fp": "60000.00",
+            "open_interest_fp": "60000.00",
+        },
+    ]
+    low_candles = [
+        {
+            "end_period_ts": 1700000000,
+            "yes_bid": {"close_dollars": "0.48"},
+            "yes_ask": {"close_dollars": "0.50"},
+            "volume_fp": "60000.00",
+            "open_interest_fp": "50000.00",
+        },
+        {
+            "end_period_ts": 1700172800,
+            "yes_bid": {"close_dollars": "0.52"},
+            "yes_ask": {"close_dollars": "0.54"},
+            "volume_fp": "60000.00",
+            "open_interest_fp": "60000.00",
+        },
+    ]
+    market_high = {**SAMPLE_MARKET, "ticker": "EVT-HIGH", "event_ticker": "EVT-SHARED"}
+    market_low = {**SAMPLE_MARKET, "ticker": "EVT-LOW", "event_ticker": "EVT-SHARED"}
+
+    candles_by_ticker = {"EVT-HIGH": high_candles, "EVT-LOW": low_candles}
+
+    async def mock_candlesticks(ticker, series_ticker, days=7):
+        return candles_by_ticker[ticker]
+
+    with (
+        patch(
+            "prediction_news.feed.list_markets_by_category",
+            new=AsyncMock(return_value=[market_high, market_low]),
+        ),
+        patch("prediction_news.feed.get_candlesticks", side_effect=mock_candlesticks),
+        patch("prediction_news.feed.fetch_articles", return_value=[SAMPLE_SOURCE]),
+        patch(
+            "prediction_news.feed.prefilter_articles",
+            new=AsyncMock(return_value=[SAMPLE_SOURCE]),
+        ),
+        patch(
+            "prediction_news.feed.rank_sources",
+            new=AsyncMock(return_value=[SAMPLE_SOURCE]),
+        ),
+    ):
+        result = await build_feed("politics")
+
+    assert len(result) == 1
+    assert result[0].id == "EVT-HIGH"
+
+
 async def test_build_feed_unknown_domain_returns_empty():
     with patch(
         "prediction_news.feed.list_markets_by_category", new=AsyncMock(return_value=[])
