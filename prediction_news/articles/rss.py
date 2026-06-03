@@ -12,29 +12,68 @@ def _strip_html(text: str) -> str:
 
 RSS_FEEDS: dict[str, list[str]] = {
     "politics": [
+        # US Politics & Policy
         "https://feeds.reuters.com/reuters/politicsNews",
         "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",
-        "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
-        "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
         "https://feeds.washingtonpost.com/rss/politics",
+        "https://feeds.politico.com/politico/rss/politicopicks",
+        "https://thehill.com/rss/syndicator/19109",
+        "https://www.axios.com/feeds/feed.rss",
+        "https://www.npr.org/rss/rss.php?id=1014",  # NPR Politics
+        # Business & Markets
+        "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
         "https://feeds.bloomberg.com/markets/news.rss",
-        "https://feeds.bloomberg.com/technology/news.rss",
         "https://feeds.marketwatch.com/marketwatch/topstories/",
         "https://feeds.marketwatch.com/marketwatch/realtimeheadlines/",
+        "https://www.cnbc.com/id/100003114/device/rss/rss.html",  # CNBC Top News
+        "https://www.cnbc.com/id/10001147/device/rss/rss.html",   # CNBC Business
+        "https://fortune.com/feed/",
+        "https://www.wsj.com/xml/rss/3_7031.xml",  # WSJ Markets
         "https://www.ft.com/rss/home",
         "https://www.ft.com/markets?format=rss",
+        # Technology
+        "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
+        "https://feeds.bloomberg.com/technology/news.rss",
+        "https://feeds.arstechnica.com/arstechnica/index",
+        "https://www.wired.com/feed/rss",
+        "https://techcrunch.com/feed/",
+        "https://www.theverge.com/rss/index.xml",
     ],
     "world": [
         "https://feeds.reuters.com/reuters/worldNews",
         "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
         "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "https://feeds.bbci.co.uk/news/rss.xml",
+        "https://www.aljazeera.com/xml/rss/all.xml",
+        "https://feeds.washingtonpost.com/rss/world",
+        "https://www.npr.org/rss/rss.php?id=1004",  # NPR World
+        "https://feeds.theguardian.com/theguardian/world/rss",
+        "https://rss.dw.com/xml/rss-en-world",  # Deutsche Welle
+        "https://www.france24.com/en/rss",
+        "https://feeds.feedburner.com/time/world",
+        "https://feeds.skynews.com/feeds/rss/world.xml",
+        "https://apnews.com/rss/apf-intlnews",  # AP International
     ],
     "sports": [
+        # General
         "https://www.espn.com/espn/rss/news",
         "https://sports.yahoo.com/rss/",
+        "https://www.cbssports.com/rss/headlines/",
+        "https://sportingnews.com/rss",
+        # ESPN by sport
+        "https://www.espn.com/espn/rss/nfl/news",
+        "https://www.espn.com/espn/rss/nba/news",
+        "https://www.espn.com/espn/rss/mlb/news",
+        "https://www.espn.com/espn/rss/nhl/news",
+        "https://www.espn.com/espn/rss/soccer/news",
+        "https://www.espn.com/espn/rss/ncf/news",   # College Football
+        "https://www.espn.com/espn/rss/ncb/news",   # College Basketball
+        # Other
+        "https://www.skysports.com/rss/12040",      # Sky Sports Football
+        "https://www.nfl.com/rss/rsslanding.html",
+        "https://www.si.com/rss/si_topstories.rss",
     ],
 }
-
 
 def _is_within_window(entry: dict, change_at: datetime) -> bool:
     published = entry.get("published_parsed")
