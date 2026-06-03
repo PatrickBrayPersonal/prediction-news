@@ -21,6 +21,24 @@
             "cwd": "${workspaceFolder}"
         },
         {
+            "name": "run sports",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/update_feed.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["--domain", "sports"]
+        },
+        {
+            "name": "run news",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/update_feed.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["--domain", "news"]
+        },
+        {
             "name": "elon ticker",
             "type": "debugpy",
             "request": "launch",

@@ -6,8 +6,8 @@ from loguru import logger
 from prediction_news.articles.rss import fetch_articles
 from prediction_news.config import settings
 from prediction_news.kalshi import (
+    get_all_markets,
     get_candlesticks,
-    list_markets_by_category,
     market_to_card_fields,
     max_single_day_move,
     most_recent_qualifying_move,
@@ -225,17 +225,15 @@ async def build_feed(domain: str) -> tuple[list[StoryCard], list[MarketLogEntry]
     log_entries: list[MarketLogEntry] = []
 
     try:
-        market_lists = await asyncio.gather(
-            *[list_markets_by_category(cat) for cat in categories]
-        )
+        domain_cats = {c.casefold() for c in categories}
+        all_markets_raw = await get_all_markets()
         seen: set[str] = set()
         all_markets = []
-        for markets in market_lists:
-            for m in markets:
-                ticker = m.get("ticker", "")
-                if ticker not in seen:
-                    seen.add(ticker)
-                    all_markets.append(m)
+        for m in all_markets_raw:
+            ticker = m.get("ticker", "")
+            if (m.get("category") or "").casefold() in domain_cats and ticker not in seen:
+                seen.add(ticker)
+                all_markets.append(m)
     except Exception as exc:
         logger.exception(
             f"Failed to fetch markets from Kalshi for domain={domain}: {exc}"

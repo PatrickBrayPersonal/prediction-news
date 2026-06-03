@@ -111,7 +111,7 @@ async def main() -> None:
     parser.add_argument(
         "--domain",
         default="politics",
-        choices=["politics", "world", "sports"],
+        choices=["sports", "news"],
         help="Domain for RSS article lookup when --ticker is used (default: politics)",
     )
     args = parser.parse_args()

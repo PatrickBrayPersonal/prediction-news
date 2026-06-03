@@ -139,34 +139,31 @@ async def _fetch_markets_by_event(event_ticker: str) -> list[dict]:
             return response.json().get("markets", [])
 
 
-async def list_markets_by_category(category: str) -> list[dict]:
-    if category in _EVENTS_CACHE:
-        logger.debug(f"list_markets_by_category cache hit for category={category}")
-        return _EVENTS_CACHE[category]
+async def get_all_markets() -> list[dict]:
+    if "__all__" in _ALL_MARKETS_CACHE:
+        logger.debug("get_all_markets cache hit")
+        return _ALL_MARKETS_CACHE["__all__"]
 
     all_events = await _get_all_events()
-    events = [e for e in all_events if (e.get("category") or "").casefold() == category.casefold()]
-    logger.info(
-        f"list_markets_by_category got {len(events)} events for category={category}"
-        f" (out of {len(all_events)} total)"
-    )
+    logger.info(f"get_all_markets fetching markets for {len(all_events)} events")
 
     market_batches = await asyncio.gather(
-        *[_fetch_markets_by_event(e["event_ticker"]) for e in events],
+        *[_fetch_markets_by_event(e["event_ticker"]) for e in all_events],
         return_exceptions=True,
     )
 
     seen: set[str] = set()
     result: list[dict] = []
     failed = 0
-    for event, batch in zip(events, market_batches):
+    for event, batch in zip(all_events, market_batches):
         if isinstance(batch, Exception):
             logger.warning(
-                f"list_markets_by_category failed to fetch markets"
+                f"get_all_markets failed to fetch markets"
                 f" for event={event.get('event_ticker', '?')}: {batch}"
             )
             failed += 1
             continue
+        category = event.get("category", "")
         series_ticker = event.get("series_ticker", "")
         before = len(result)
         for m in batch:
@@ -178,6 +175,7 @@ async def list_markets_by_category(category: str) -> list[dict]:
                         **m,
                         "series_ticker": series_ticker,
                         "event_ticker": event.get("event_ticker", ""),
+                        "category": category,
                     }
                 )
         logger.debug(
@@ -186,9 +184,23 @@ async def list_markets_by_category(category: str) -> list[dict]:
         )
 
     logger.info(
-        f"list_markets_by_category category={category}:"
-        f" {len(result)} total markets, {failed} events failed"
+        f"get_all_markets: {len(result)} total markets, {failed} events failed"
     )
+    _ALL_MARKETS_CACHE["__all__"] = result
+    return result
+
+
+async def list_markets_by_category(category: str) -> list[dict]:
+    if category in _EVENTS_CACHE:
+        logger.debug(f"list_markets_by_category cache hit for category={category}")
+        return _EVENTS_CACHE[category]
+
+    all_markets = await get_all_markets()
+    result = [
+        m for m in all_markets
+        if (m.get("category") or "").casefold() == category.casefold()
+    ]
+    logger.info(f"list_markets_by_category category={category}: {len(result)} markets")
     _EVENTS_CACHE[category] = result
     return result
 
