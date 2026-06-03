@@ -16,7 +16,7 @@ async def main() -> None:
     market = ast.literal_eval(raw.strip())
 
     print(f"Building card for ticker={market.get('ticker')}...")
-    card, _ = await _build_card(market, "politics")
+    card, _ = await _build_card(market, "news")
 
     if card is None:
         print("No card returned (missing candlesticks or filtered out).")

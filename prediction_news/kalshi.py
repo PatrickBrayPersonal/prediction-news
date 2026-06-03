@@ -98,20 +98,34 @@ async def list_markets(series: str | None = None) -> list[dict]:
 
 
 @_KALSHI_RETRY
-async def _fetch_all_events() -> list[dict]:
+async def _fetch_events_page(cursor: str | None) -> tuple[list[dict], str | None]:
     path = "/trade-api/v2/events"
+    params: dict[str, str] = {"status": "open", "limit": "200"}
+    if cursor:
+        params["cursor"] = cursor
     async with _SEMAPHORE:
         async with httpx.AsyncClient(base_url=KALSHI_BASE) as client:
             response = await client.get(
                 "/events",
-                params={
-                    "status": "open",
-                    "limit": str(settings.kalshi_events_limit),
-                },
+                params=params,
                 headers=_auth_headers("GET", path),
             )
             response.raise_for_status()
-            return response.json().get("events", [])
+            data = response.json()
+            return data.get("events", []), data.get("cursor") or None
+
+
+async def _fetch_all_events() -> list[dict]:
+    result: list[dict] = []
+    cursor: str | None = None
+    while True:
+        events, cursor = await _fetch_events_page(cursor)
+        result.extend(events)
+        logger.debug(f"_fetch_all_events page fetched {len(events)}, cursor={bool(cursor)}")
+        if not cursor or not events:
+            break
+    logger.info(f"_fetch_all_events total {len(result)} events")
+    return result
 
 
 async def _get_all_events() -> list[dict]:

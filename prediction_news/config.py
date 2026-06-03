@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     kalshi_private_key_path: str = "kalshi_private.key"
 
     cors_origins: str = "http://localhost:5173"
-    kalshi_events_limit: int = 100
     kalshi_lookback_days: int = 14
     min_probability_move: float = 0.02
     min_open_interest: float = 10_000.0

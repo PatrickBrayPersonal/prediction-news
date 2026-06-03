@@ -110,7 +110,7 @@ async def main() -> None:
     parser.add_argument("--ticker", help="Build a single card for this market ticker")
     parser.add_argument(
         "--domain",
-        default="politics",
+        default="news",
         choices=["sports", "news"],
         help="Domain for RSS article lookup when --ticker is used (default: politics)",
     )
