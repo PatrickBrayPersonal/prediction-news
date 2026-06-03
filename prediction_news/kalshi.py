@@ -160,11 +160,13 @@ async def list_markets_by_category(category: str) -> list[dict]:
             ticker = m.get("ticker", "")
             if ticker and ticker not in seen:
                 seen.add(ticker)
-                result.append({
-                    **m,
-                    "series_ticker": series_ticker,
-                    "event_ticker": event.get("event_ticker", ""),
-                })
+                result.append(
+                    {
+                        **m,
+                        "series_ticker": series_ticker,
+                        "event_ticker": event.get("event_ticker", ""),
+                    }
+                )
         logger.debug(
             f"event={event.get('event_ticker', '?')} added {len(result) - before}"
             f" markets (batch size={len(batch)})"

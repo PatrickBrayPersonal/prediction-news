@@ -20,7 +20,9 @@ def _make_text_client(
 
     mock_response = MagicMock()
     mock_response.content = [mock_content]
-    mock_response.usage = MagicMock(input_tokens=input_tokens, output_tokens=output_tokens)
+    mock_response.usage = MagicMock(
+        input_tokens=input_tokens, output_tokens=output_tokens
+    )
 
     mock_client = MagicMock()
     mock_client.messages = AsyncMock()
@@ -38,7 +40,9 @@ def _make_tool_client(
 
     mock_response = MagicMock()
     mock_response.content = [mock_tool_use]
-    mock_response.usage = MagicMock(input_tokens=input_tokens, output_tokens=output_tokens)
+    mock_response.usage = MagicMock(
+        input_tokens=input_tokens, output_tokens=output_tokens
+    )
 
     mock_client = MagicMock()
     mock_client.messages = AsyncMock()
@@ -58,6 +62,7 @@ def _make_no_tool_client() -> MagicMock:
 
 
 # --- prefilter_articles ---
+
 
 async def test_prefilter_articles_uses_haiku():
     mock_client = _make_text_client("[0]")
@@ -84,6 +89,7 @@ async def test_prefilter_articles_empty_input_skips_api():
 
 # --- rank_sources ---
 
+
 async def test_rank_sources_uses_sonnet():
     mock_client = _make_tool_client(["https://reuters.com/1"])
     with patch("prediction_news.services.llm._client", mock_client):
@@ -97,7 +103,10 @@ async def test_rank_sources_forces_tool_call():
     with patch("prediction_news.services.llm._client", mock_client):
         await rank_sources("US Election 2024", SAMPLE_SOURCES)
     call_kwargs = mock_client.messages.create.call_args.kwargs
-    assert call_kwargs["tool_choice"] == {"type": "tool", "name": "submit_ranked_sources"}
+    assert call_kwargs["tool_choice"] == {
+        "type": "tool",
+        "name": "submit_ranked_sources",
+    }
 
 
 async def test_rank_sources_returns_ranked_list():

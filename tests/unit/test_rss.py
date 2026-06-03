@@ -138,7 +138,9 @@ def test_fetch_articles_includes_entry_within_window():
 
 def test_fetch_articles_no_time_filter_when_change_at_none():
     entry = _make_old_entry(
-        "Old election news", "https://reuters.com/5d", "Election results from last week."
+        "Old election news",
+        "https://reuters.com/5d",
+        "Election results from last week.",
     )
     with patch(
         "prediction_news.articles.rss.feedparser.parse",

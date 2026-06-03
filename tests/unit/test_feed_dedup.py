@@ -6,7 +6,11 @@ from prediction_news.feed import _select_top_market_per_event
 
 
 def _market(ticker: str, event_ticker: str = "", series_ticker: str = "SER") -> dict:
-    return {"ticker": ticker, "event_ticker": event_ticker, "series_ticker": series_ticker}
+    return {
+        "ticker": ticker,
+        "event_ticker": event_ticker,
+        "series_ticker": series_ticker,
+    }
 
 
 @pytest.mark.asyncio
@@ -28,8 +32,20 @@ async def test_picks_market_with_bigger_move():
     async def mock_candles(ticker, series_ticker, days):
         delta = 0.10 if ticker == "EVT-A" else 0.30
         return [
-            {"end_period_ts": 1700000000, "yes_bid": {"close_dollars": "0.40"}, "yes_ask": {"close_dollars": "0.42"}, "volume_fp": "1000", "open_interest_fp": "5000"},
-            {"end_period_ts": 1700086400, "yes_bid": {"close_dollars": str(round(0.40 + delta, 4))}, "yes_ask": {"close_dollars": str(round(0.42 + delta, 4))}, "volume_fp": "1000", "open_interest_fp": "5000"},
+            {
+                "end_period_ts": 1700000000,
+                "yes_bid": {"close_dollars": "0.40"},
+                "yes_ask": {"close_dollars": "0.42"},
+                "volume_fp": "1000",
+                "open_interest_fp": "5000",
+            },
+            {
+                "end_period_ts": 1700086400,
+                "yes_bid": {"close_dollars": str(round(0.40 + delta, 4))},
+                "yes_ask": {"close_dollars": str(round(0.42 + delta, 4))},
+                "volume_fp": "1000",
+                "open_interest_fp": "5000",
+            },
         ]
 
     with patch("prediction_news.feed.get_candlesticks", side_effect=mock_candles):
@@ -83,8 +99,20 @@ async def test_multiple_events_each_produce_one_winner():
     async def mock_candles(ticker, series_ticker, days):
         delta = moves[ticker]
         return [
-            {"end_period_ts": 1700000000, "yes_bid": {"close_dollars": "0.40"}, "yes_ask": {"close_dollars": "0.42"}, "volume_fp": "1000", "open_interest_fp": "5000"},
-            {"end_period_ts": 1700086400, "yes_bid": {"close_dollars": str(round(0.40 + delta, 4))}, "yes_ask": {"close_dollars": str(round(0.42 + delta, 4))}, "volume_fp": "1000", "open_interest_fp": "5000"},
+            {
+                "end_period_ts": 1700000000,
+                "yes_bid": {"close_dollars": "0.40"},
+                "yes_ask": {"close_dollars": "0.42"},
+                "volume_fp": "1000",
+                "open_interest_fp": "5000",
+            },
+            {
+                "end_period_ts": 1700086400,
+                "yes_bid": {"close_dollars": str(round(0.40 + delta, 4))},
+                "yes_ask": {"close_dollars": str(round(0.42 + delta, 4))},
+                "volume_fp": "1000",
+                "open_interest_fp": "5000",
+            },
         ]
 
     with patch("prediction_news.feed.get_candlesticks", side_effect=mock_candles):

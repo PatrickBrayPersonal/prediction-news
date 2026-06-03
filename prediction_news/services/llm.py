@@ -96,7 +96,11 @@ async def rank_sources(market_name: str, articles: list[Source]) -> list[Source]
     )
 
     tool_use = next(
-        (b for b in response.content if b.type == "tool_use" and b.name == "submit_ranked_sources"),
+        (
+            b
+            for b in response.content
+            if b.type == "tool_use" and b.name == "submit_ranked_sources"
+        ),
         None,
     )
     if tool_use is None:

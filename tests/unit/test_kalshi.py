@@ -121,7 +121,9 @@ def test_candlesticks_to_sparkline_sorted_by_date():
 
 
 def test_market_to_card_fields_computes_move():
-    card_fields = market_to_card_fields(SAMPLE_MARKET, SAMPLE_CANDLES, probability_move=0.06)
+    card_fields = market_to_card_fields(
+        SAMPLE_MARKET, SAMPLE_CANDLES, probability_move=0.06
+    )
     assert card_fields["platform"] == "Kalshi"
     assert card_fields["market_name"] == SAMPLE_MARKET["title"]
     assert "current_probability" in card_fields
@@ -157,7 +159,9 @@ def test_market_to_card_fields_uses_yes_sub_title():
         "title": "Will  become President of the United States before 2045?",
         "yes_sub_title": "Gavin Newsom",
     }
-    card_fields = market_to_card_fields(market_with_sub, SAMPLE_CANDLES, probability_move=0.05)
+    card_fields = market_to_card_fields(
+        market_with_sub, SAMPLE_CANDLES, probability_move=0.05
+    )
     assert (
         card_fields["headline"]
         == "Will Gavin Newsom become President of the United States before 2045?"
@@ -170,12 +174,16 @@ def test_market_to_card_fields_no_sub_title_uses_raw_title():
         **SAMPLE_MARKET,
         "title": "Will  become President before 2045?",
     }
-    card_fields = market_to_card_fields(market_without_sub, SAMPLE_CANDLES, probability_move=0.05)
+    card_fields = market_to_card_fields(
+        market_without_sub, SAMPLE_CANDLES, probability_move=0.05
+    )
     assert card_fields["headline"] == "Will  become President before 2045?"
 
 
 def test_market_to_card_fields_passes_through_probability_move():
-    card_fields = market_to_card_fields(SAMPLE_MARKET, SAMPLE_CANDLES, probability_move=-0.12)
+    card_fields = market_to_card_fields(
+        SAMPLE_MARKET, SAMPLE_CANDLES, probability_move=-0.12
+    )
     assert card_fields["probability_move"] == -0.12
 
 

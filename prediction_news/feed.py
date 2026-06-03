@@ -185,7 +185,9 @@ async def _build_card(
     sources_matched_urls_str = "|".join(s.url for s in sources) or None
 
     if not sources:
-        logger.info(f"_build_card skipping ticker={ticker}: no causally matched sources")
+        logger.info(
+            f"_build_card skipping ticker={ticker}: no causally matched sources"
+        )
         return None, _entry(False, "no_matched_sources")
 
     summary = sources[0].excerpt if sources else ""

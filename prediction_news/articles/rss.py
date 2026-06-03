@@ -10,6 +10,7 @@ from prediction_news.models import Source
 def _strip_html(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text).strip()
 
+
 RSS_FEEDS: dict[str, list[str]] = {
     "politics": [
         # US Politics & Policy
@@ -26,7 +27,7 @@ RSS_FEEDS: dict[str, list[str]] = {
         "https://feeds.marketwatch.com/marketwatch/topstories/",
         "https://feeds.marketwatch.com/marketwatch/realtimeheadlines/",
         "https://www.cnbc.com/id/100003114/device/rss/rss.html",  # CNBC Top News
-        "https://www.cnbc.com/id/10001147/device/rss/rss.html",   # CNBC Business
+        "https://www.cnbc.com/id/10001147/device/rss/rss.html",  # CNBC Business
         "https://fortune.com/feed/",
         "https://www.wsj.com/xml/rss/3_7031.xml",  # WSJ Markets
         "https://www.ft.com/rss/home",
@@ -66,14 +67,15 @@ RSS_FEEDS: dict[str, list[str]] = {
         "https://www.espn.com/espn/rss/mlb/news",
         "https://www.espn.com/espn/rss/nhl/news",
         "https://www.espn.com/espn/rss/soccer/news",
-        "https://www.espn.com/espn/rss/ncf/news",   # College Football
-        "https://www.espn.com/espn/rss/ncb/news",   # College Basketball
+        "https://www.espn.com/espn/rss/ncf/news",  # College Football
+        "https://www.espn.com/espn/rss/ncb/news",  # College Basketball
         # Other
-        "https://www.skysports.com/rss/12040",      # Sky Sports Football
+        "https://www.skysports.com/rss/12040",  # Sky Sports Football
         "https://www.nfl.com/rss/rsslanding.html",
         "https://www.si.com/rss/si_topstories.rss",
     ],
 }
+
 
 def _is_within_window(entry: dict, change_at: datetime) -> bool:
     published = entry.get("published_parsed")
