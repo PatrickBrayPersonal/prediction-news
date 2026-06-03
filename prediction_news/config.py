@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     min_open_interest: float = 10_000.0
     article_window_before_hours: int = 24
     article_window_after_hours: int = 48
-    feed_domains: str = "politics"
+    feed_domains: str = "politics,world,sports"
 
     model_config = {"env_file": str(_PROJECT_ROOT / ".env"), "extra": "ignore"}
 
