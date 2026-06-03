@@ -67,12 +67,12 @@ async def test_build_feed_returns_story_cards():
             new=AsyncMock(return_value=[SAMPLE_SOURCE]),
         ),
     ):
-        result, _ = await build_feed("politics")
+        result, _ = await build_feed("news")
 
     assert len(result) == 1
     card = result[0]
     assert isinstance(card, StoryCard)
-    assert card.domain == "politics"
+    assert card.domain == "news"
     assert card.platform == "Kalshi"
     assert card.summary == SAMPLE_EXCERPT
     assert card.sources == [SAMPLE_SOURCE]
@@ -137,7 +137,7 @@ async def test_build_feed_cards_are_ranked():
             new=AsyncMock(return_value=[SAMPLE_SOURCE]),
         ),
     ):
-        result, _ = await build_feed("politics")
+        result, _ = await build_feed("news")
 
     assert len(result) == 2
     assert result[0].id == "KXELECTION-HIGH"
@@ -149,7 +149,7 @@ async def test_build_feed_handles_kalshi_failure():
         "prediction_news.feed.list_markets_by_category",
         new=AsyncMock(side_effect=Exception("API down")),
     ):
-        result, _ = await build_feed("politics")
+        result, _ = await build_feed("news")
     assert result == []
 
 
@@ -211,7 +211,7 @@ async def test_build_feed_deduplicates_markets_by_event():
             new=AsyncMock(return_value=[SAMPLE_SOURCE]),
         ),
     ):
-        result, _ = await build_feed("politics")
+        result, _ = await build_feed("news")
 
     assert len(result) == 1
     assert result[0].id == "EVT-HIGH"

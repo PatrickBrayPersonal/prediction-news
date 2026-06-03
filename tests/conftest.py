@@ -44,7 +44,7 @@ def sample_source():
 def sample_story_card(sample_sparkline, sample_source):
     return {
         "id": "test-card-1",
-        "domain": "politics",
+        "domain": "news",
         "headline": "Test headline about election odds",
         "platform": "Kalshi",
         "market_name": "US Election 2024",

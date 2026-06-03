@@ -26,7 +26,7 @@ class Source(BaseModel):
 
 class StoryCard(BaseModel):
     id: str
-    domain: Literal["politics", "world", "sports"]
+    domain: Literal["news", "sports"]
     headline: str
     platform: Literal["Kalshi", "Polymarket"]
     market_name: str

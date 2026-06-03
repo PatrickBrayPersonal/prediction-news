@@ -43,14 +43,14 @@ def test_source_rejects_invalid_type():
 def test_story_card_valid(sample_story_card):
     card = StoryCard(**sample_story_card)
     assert card.id == "test-card-1"
-    assert card.domain == "politics"
+    assert card.domain == "news"
     assert card.platform == "Kalshi"
     assert len(card.sparkline) == 3
     assert len(card.sources) == 1
 
 
 def test_story_card_valid_domains(sample_story_card):
-    for domain in ("politics", "world", "sports"):
+    for domain in ("news", "sports"):
         sample_story_card["domain"] = domain
         card = StoryCard(**sample_story_card)
         assert card.domain == domain

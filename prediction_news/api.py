@@ -36,8 +36,7 @@ app.add_middleware(
 
 
 class Domain(str, Enum):
-    politics = "politics"
-    world = "world"
+    news = "news"
     sports = "sports"
 
 

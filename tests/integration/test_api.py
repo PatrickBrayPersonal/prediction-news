@@ -7,7 +7,7 @@ from prediction_news.models import Source, SparklinePoint, StoryCard
 
 SAMPLE_CARD = StoryCard(
     id="test-1",
-    domain="politics",
+    domain="news",
     headline="Test headline",
     platform="Kalshi",
     market_name="Test Market",
@@ -26,7 +26,7 @@ def test_get_feed_returns_200_with_cards():
         "prediction_news.feed.build_feed", new=AsyncMock(return_value=[SAMPLE_CARD])
     ):
         client = TestClient(app)
-        response = client.get("/api/feeds/politics")
+        response = client.get("/api/feeds/news")
     assert response.status_code == 200
 
 
@@ -40,7 +40,7 @@ def test_get_feed_cors_header_present():
     with patch("prediction_news.feed.build_feed", new=AsyncMock(return_value=[])):
         client = TestClient(app)
         response = client.get(
-            "/api/feeds/politics",
+            "/api/feeds/news",
             headers={"Origin": "http://localhost:5173"},
         )
     assert "access-control-allow-origin" in response.headers

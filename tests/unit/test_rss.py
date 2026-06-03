@@ -45,7 +45,7 @@ def test_fetch_articles_returns_source_objects():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["democrats"], "politics")
+        results = fetch_articles(["democrats"], "news")
     assert len(results) == 1
     assert results[0].type == "rss"
     assert results[0].title == "Democrats lead in polls"
@@ -60,7 +60,7 @@ def test_fetch_articles_keyword_match_in_title():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["election"], "politics")
+        results = fetch_articles(["election"], "news")
     assert len(results) == 1
 
 
@@ -72,7 +72,7 @@ def test_fetch_articles_keyword_match_in_summary():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["election"], "politics")
+        results = fetch_articles(["election"], "news")
     assert len(results) == 1
 
 
@@ -84,7 +84,7 @@ def test_fetch_articles_excludes_non_matching_entries():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["election"], "politics")
+        results = fetch_articles(["election"], "news")
     assert results == []
 
 
@@ -100,7 +100,7 @@ def test_fetch_articles_excludes_entry_before_window():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["election"], "politics", change_at=change_at)
+        results = fetch_articles(["election"], "news", change_at=change_at)
     assert results == []
 
 
@@ -116,7 +116,7 @@ def test_fetch_articles_excludes_entry_after_window():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["election"], "politics", change_at=change_at)
+        results = fetch_articles(["election"], "news", change_at=change_at)
     assert results == []
 
 
@@ -132,7 +132,7 @@ def test_fetch_articles_includes_entry_within_window():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["election"], "politics", change_at=change_at)
+        results = fetch_articles(["election"], "news", change_at=change_at)
     assert len(results) == 1
 
 
@@ -146,7 +146,7 @@ def test_fetch_articles_no_time_filter_when_change_at_none():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["election"], "politics", change_at=None)
+        results = fetch_articles(["election"], "news", change_at=None)
     assert len(results) == 1
 
 
@@ -160,7 +160,7 @@ def test_fetch_articles_keeps_entries_without_published():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["election"], "politics")
+        results = fetch_articles(["election"], "news")
     assert len(results) == 1
 
 
@@ -180,6 +180,6 @@ def test_fetch_articles_deduplicates_by_url():
         "prediction_news.articles.rss.feedparser.parse",
         return_value=_mock_parse([entry]),
     ):
-        results = fetch_articles(["election"], "politics")
+        results = fetch_articles(["election"], "news")
     assert len(results) == 1
     assert results[0].url == url

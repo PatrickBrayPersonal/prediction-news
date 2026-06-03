@@ -12,7 +12,7 @@ def _strip_html(text: str) -> str:
 
 
 RSS_FEEDS: dict[str, list[str]] = {
-    "politics": [
+    "news": [
         # US Politics & Policy
         "https://feeds.reuters.com/reuters/politicsNews",
         "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",
@@ -39,8 +39,7 @@ RSS_FEEDS: dict[str, list[str]] = {
         "https://www.wired.com/feed/rss",
         "https://techcrunch.com/feed/",
         "https://www.theverge.com/rss/index.xml",
-    ],
-    "world": [
+        # World
         "https://feeds.reuters.com/reuters/worldNews",
         "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
         "https://feeds.bbci.co.uk/news/world/rss.xml",

@@ -10,7 +10,7 @@ def _make_card(
 ) -> StoryCard:
     return StoryCard(
         id=card_id,
-        domain="politics",
+        domain="news",
         headline="Test headline",
         platform="Kalshi",
         market_name="Test Market",
