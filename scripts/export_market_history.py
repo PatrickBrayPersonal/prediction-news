@@ -39,7 +39,7 @@ import httpx  # noqa: E402
 KALSHI_BASE = "https://external-api.kalshi.com/trade-api/v2"
 
 
-async def _fetch_all_markets_paginated(limit: int = 200) -> list[dict]:
+async def _fetch_all_markets_paginated(limit: int = 1_000) -> list[dict]:
     """Fetch all open markets with pagination."""
     all_markets: list[dict] = []
     cursor: str | None = None

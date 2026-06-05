@@ -155,7 +155,7 @@ async def _fetch_markets_page(cursor: str | None) -> tuple[list[dict], str | Non
     max_close_ts = now_ts + settings.kalshi_max_days_to_close * 86400
     params: dict[str, str] = {
         "status": "open",
-        "limit": "500",
+        "limit": "1000",
         "min_close_ts": str(now_ts),
         "max_close_ts": str(max_close_ts),
     }

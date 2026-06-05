@@ -50,7 +50,7 @@ async def main() -> None:
         )
     print()
 
-    print("Fetching open markets (no series filter, limit 200)...")
+    print("Fetching open markets (no series filter, limit 1000)...")
     try:
         markets = await list_markets()
     except Exception as exc:
