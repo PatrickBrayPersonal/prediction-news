@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, field_validator
 
@@ -61,6 +61,25 @@ class StoryCard(BaseModel):
         if v < 0:
             raise ValueError("volume_usd must be non-negative")
         return v
+
+
+class CandleEntry(BaseModel):
+    market: dict[str, Any]
+    candles: list[dict[str, Any]]
+    probability_move: float
+    change_at: str  # ISO datetime
+
+
+class MarketsCheckpoint(BaseModel):
+    fetched_at: str
+    domain: str
+    markets: list[dict[str, Any]]
+
+
+class CandlesCheckpoint(BaseModel):
+    fetched_at: str
+    domain: str
+    entries: list[CandleEntry]
 
 
 @dataclass

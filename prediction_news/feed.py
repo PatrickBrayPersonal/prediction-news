@@ -84,26 +84,38 @@ async def _select_top_market_per_event(markets: list[dict]) -> list[dict]:
     return result
 
 
-async def _build_card(
-    market: dict, domain: str, run_timestamp: str = ""
+async def _build_card_from_candles(
+    market: dict,
+    candles: list[dict],
+    probability_move: float,
+    change_at: datetime,
+    domain: str,
+    run_timestamp: str = "",
 ) -> tuple[StoryCard | None, MarketLogEntry]:
     ticker = market.get("ticker", "")
-    series_ticker = market.get("series_ticker", "")
     event_ticker = market.get("event_ticker", "")
     yes_sub_title = market.get("yes_sub_title", "")
-    market_name = yes_sub_title or ticker
 
-    probability_move: float | None = None
-    current_probability: float | None = None
-    open_interest_val: float | None = None
-    volume_usd_val: float | None = None
-    change_at_str: str | None = None
-    articles_fetched_count: int | None = None
-    articles_fetched_urls_str: str | None = None
-    articles_prefiltered_count: int | None = None
-    articles_prefiltered_urls_str: str | None = None
-    sources_matched_count: int | None = None
-    sources_matched_urls_str: str | None = None
+    card_fields = market_to_card_fields(market, candles, probability_move=probability_move)
+    market_name = card_fields["market_name"]
+    keywords = extract_keywords(market_name, yes_sub_title)
+
+    logger.info(
+        f"_build_card ticker={ticker} prob_move={probability_move:.4f}"
+        f" open_interest={card_fields['open_interest']:.2f} keywords={keywords}"
+        f" change_at={change_at}"
+    )
+
+    articles = fetch_articles(keywords, domain, change_at=change_at)
+    logger.info(f"_build_card ticker={ticker} fetched {len(articles)} raw articles")
+
+    filtered = await prefilter_articles(market_name, articles)
+    logger.info(
+        f"_build_card ticker={ticker} prefilter: {len(filtered)}/{len(articles)} articles passed"
+    )
+
+    sources = await rank_sources(market_name, filtered)
+    logger.info(f"_build_card ticker={ticker} rank_sources returned {len(sources)} sources")
 
     def _entry(card_built: bool, skip_reason: str | None) -> MarketLogEntry:
         return MarketLogEntry(
@@ -114,23 +126,69 @@ async def _build_card(
             market_name=market_name,
             yes_sub_title=yes_sub_title,
             probability_move=probability_move,
-            current_probability=current_probability,
-            open_interest=open_interest_val,
-            volume_usd=volume_usd_val,
-            change_at=change_at_str,
-            articles_fetched=articles_fetched_count,
-            articles_fetched_urls=articles_fetched_urls_str,
-            articles_prefiltered=articles_prefiltered_count,
-            articles_prefiltered_urls=articles_prefiltered_urls_str,
-            sources_matched=sources_matched_count,
-            sources_matched_urls=sources_matched_urls_str,
+            current_probability=card_fields["current_probability"],
+            open_interest=card_fields["open_interest"],
+            volume_usd=card_fields["volume_usd"],
+            change_at=change_at.isoformat(),
+            articles_fetched=len(articles),
+            articles_fetched_urls="|".join(a.url for a in articles) or None,
+            articles_prefiltered=len(filtered),
+            articles_prefiltered_urls="|".join(a.url for a in filtered) or None,
+            sources_matched=len(sources),
+            sources_matched_urls="|".join(s.url for s in sources) or None,
             card_built=card_built,
+            skip_reason=skip_reason,
+        )
+
+    if not sources:
+        logger.info(f"_build_card skipping ticker={ticker}: no causally matched sources")
+        return None, _entry(False, "no_matched_sources")
+
+    card = StoryCard(
+        **card_fields,
+        domain=domain,
+        summary=sources[0].excerpt or "",
+        sources=sources,
+        change_at=change_at.isoformat(),
+    )
+    return card, _entry(True, None)
+
+
+async def _build_card(
+    market: dict, domain: str, run_timestamp: str = ""
+) -> tuple[StoryCard | None, MarketLogEntry]:
+    ticker = market.get("ticker", "")
+    series_ticker = market.get("series_ticker", "")
+    event_ticker = market.get("event_ticker", "")
+    yes_sub_title = market.get("yes_sub_title", "")
+    market_name = yes_sub_title or ticker
+
+    def _early_exit(skip_reason: str) -> tuple[None, MarketLogEntry]:
+        return None, MarketLogEntry(
+            run_timestamp=run_timestamp,
+            domain=domain,
+            ticker=ticker,
+            event_ticker=event_ticker,
+            market_name=market_name,
+            yes_sub_title=yes_sub_title,
+            probability_move=None,
+            current_probability=None,
+            open_interest=None,
+            volume_usd=None,
+            change_at=None,
+            articles_fetched=None,
+            articles_fetched_urls=None,
+            articles_prefiltered=None,
+            articles_prefiltered_urls=None,
+            sources_matched=None,
+            sources_matched_urls=None,
+            card_built=False,
             skip_reason=skip_reason,
         )
 
     if not series_ticker:
         logger.debug(f"_build_card skipping ticker={ticker}: no series_ticker")
-        return None, _entry(False, "no_series_ticker")
+        return _early_exit("no_series_ticker")
 
     try:
         candles = await get_candlesticks(
@@ -138,72 +196,25 @@ async def _build_card(
         )
     except Exception:
         logger.warning(f"Failed to fetch candlesticks for {ticker}")
-        return None, _entry(False, "candlestick_fetch_failed")
+        return _early_exit("candlestick_fetch_failed")
 
     if not candles:
         logger.debug(f"_build_card skipping ticker={ticker}: 0 candles returned")
-        return None, _entry(False, "candlestick_fetch_failed")
+        return _early_exit("candlestick_fetch_failed")
 
-    move_value, change_at = most_recent_qualifying_move(
+    probability_move, change_at = most_recent_qualifying_move(
         candles, settings.min_probability_move
     )
-    probability_move = move_value
     if not change_at:
         logger.debug(
             f"_build_card skipping ticker={ticker}: no single-day move"
             f" >= {settings.min_probability_move}"
         )
-        return None, _entry(False, "below_min_probability_move")
+        return _early_exit("below_min_probability_move")
 
-    card_fields = market_to_card_fields(market, candles, probability_move=move_value)
-    market_name = card_fields["market_name"]
-    current_probability = card_fields["current_probability"]
-    open_interest_val = card_fields["open_interest"]
-    volume_usd_val = card_fields["volume_usd"]
-    change_at_str = change_at.isoformat()
-
-    keywords = extract_keywords(card_fields["market_name"], yes_sub_title)
-    logger.info(
-        f"_build_card ticker={ticker} prob_move={card_fields['probability_move']:.4f}"
-        f" open_interest={card_fields['open_interest']:.2f} keywords={keywords}"
-        f" change_at={change_at}"
+    return await _build_card_from_candles(
+        market, candles, probability_move, change_at, domain, run_timestamp
     )
-
-    articles = fetch_articles(keywords, domain, change_at=change_at)
-    logger.info(f"_build_card ticker={ticker} fetched {len(articles)} raw articles")
-    articles_fetched_count = len(articles)
-    articles_fetched_urls_str = "|".join(a.url for a in articles) or None
-
-    filtered = await prefilter_articles(card_fields["market_name"], articles)
-    logger.info(
-        f"_build_card ticker={ticker} prefilter: {len(filtered)}/{len(articles)} articles passed"
-    )
-    articles_prefiltered_count = len(filtered)
-    articles_prefiltered_urls_str = "|".join(a.url for a in filtered) or None
-
-    sources = await rank_sources(card_fields["market_name"], filtered)
-    logger.info(
-        f"_build_card ticker={ticker} rank_sources returned {len(sources)} sources"
-    )
-    sources_matched_count = len(sources)
-    sources_matched_urls_str = "|".join(s.url for s in sources) or None
-
-    if not sources:
-        logger.info(
-            f"_build_card skipping ticker={ticker}: no causally matched sources"
-        )
-        return None, _entry(False, "no_matched_sources")
-
-    summary = sources[0].excerpt if sources else ""
-
-    card = StoryCard(
-        **card_fields,
-        domain=domain,
-        summary=summary,
-        sources=sources,
-        change_at=change_at.isoformat(),
-    )
-    return card, _entry(True, None)
 
 
 async def build_feed(domain: str) -> tuple[list[StoryCard], list[MarketLogEntry]]:
