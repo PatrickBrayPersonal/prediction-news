@@ -175,7 +175,7 @@ async def _fetch_markets_page(cursor: str | None) -> tuple[list[dict], str | Non
             return data.get("markets", []), data.get("cursor") or None
 
 
-async def _fetch_all_open_markets() -> list[dict]:
+async def _fetch_all_open_markets(limit: int | None = None) -> list[dict]:
     result: list[dict] = []
     cursor: str | None = None
     page = 0
@@ -189,17 +189,19 @@ async def _fetch_all_open_markets() -> list[dict]:
         )
         if not cursor or not markets:
             break
-    return result
+        if limit is not None and len(result) >= limit:
+            break
+    return result[:limit] if limit is not None else result
 
 
-async def get_all_markets() -> list[dict]:
-    if "__all__" in _ALL_MARKETS_CACHE:
+async def get_all_markets(limit: int | None = None) -> list[dict]:
+    if limit is None and "__all__" in _ALL_MARKETS_CACHE:
         logger.debug("get_all_markets cache hit")
         return _ALL_MARKETS_CACHE["__all__"]
 
     all_events, all_markets = await asyncio.gather(
         _get_all_events(),
-        _fetch_all_open_markets(),
+        _fetch_all_open_markets(limit=limit),
     )
     logger.info(
         f"get_all_markets joining {len(all_markets)} markets to {len(all_events)} events"
@@ -238,7 +240,8 @@ async def get_all_markets() -> list[dict]:
         )
 
     logger.info(f"get_all_markets: {len(result)} markets joined, {orphaned} orphaned")
-    _ALL_MARKETS_CACHE["__all__"] = result
+    if limit is None:
+        _ALL_MARKETS_CACHE["__all__"] = result
     return result
 
 

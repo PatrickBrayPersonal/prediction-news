@@ -97,10 +97,10 @@ def _staleness_warning(fetched_at: str, label: str, threshold_hours: float = 4.0
         logger.warning(f"{label} checkpoint is {age:.1f}h old (threshold {threshold_hours}h)")
 
 
-async def cmd_pull_markets(domains: list[str], date_str: str) -> None:
+async def cmd_pull_markets(domains: list[str], date_str: str, limit: int | None = None) -> None:
     t0 = time.perf_counter()
     logger.info("pull-markets: fetching all open markets from Kalshi...")
-    all_markets = await get_all_markets()
+    all_markets = await get_all_markets(limit=limit)
     logger.info(
         f"pull-markets: {len(all_markets)} total markets"
         f" ({time.perf_counter() - t0:.1f}s)"
@@ -347,17 +347,25 @@ async def main() -> None:
         "--ticker",
         help="Build a single card for this market ticker (only valid with build-cards)",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Cap total markets fetched in pull-markets (only valid with pull-markets or run)",
+    )
     args = parser.parse_args()
 
     if args.ticker and args.step != "build-cards":
         parser.error("--ticker is only valid with the build-cards step")
+    if args.limit is not None and args.step not in ("pull-markets", "run"):
+        parser.error("--limit is only valid with pull-markets or run")
 
     _setup_logging(datetime.now(timezone.utc))
     domains = [d.strip() for d in args.domain.split(",") if d.strip()]
     now = datetime.now(timezone.utc)
 
     if args.step == "pull-markets":
-        await cmd_pull_markets(domains, args.date)
+        await cmd_pull_markets(domains, args.date, limit=args.limit)
     elif args.step == "pull-candles":
         await cmd_pull_candles(domains, args.date)
     elif args.step == "build-cards":
@@ -367,7 +375,7 @@ async def main() -> None:
         else:
             await cmd_build_cards(domains, args.date)
     elif args.step == "run":
-        await cmd_pull_markets(domains, args.date)
+        await cmd_pull_markets(domains, args.date, limit=args.limit)
         await cmd_pull_candles(domains, args.date)
         await cmd_build_cards(domains, args.date)
 
