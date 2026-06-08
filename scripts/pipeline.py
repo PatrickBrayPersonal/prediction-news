@@ -141,7 +141,7 @@ async def cmd_pull_candles(domains: list[str], date_str: str) -> None:
 
         qualifying = [
             m for m in markets_ckpt.markets
-            if float(m.get("open_interest") or 0) >= settings.min_open_interest
+            if float(m.get("open_interest_fp") or 0) >= settings.min_open_interest
         ]
         logger.info(
             f"pull-candles {domain}: {len(qualifying)}/{len(markets_ckpt.markets)}"
